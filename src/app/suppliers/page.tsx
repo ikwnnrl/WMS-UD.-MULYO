@@ -34,7 +34,20 @@ export default function SuppliersPage() {
     }, []);
 
     const fetchSuppliers = () => {
-        fetch('/api/suppliers').then(res => res.json()).then(setSuppliers);
+        fetch('/api/suppliers')
+            .then(res => res.json())
+            .then(data => {
+                if (Array.isArray(data)) {
+                    setSuppliers(data);
+                } else {
+                    console.error("Invalid suppliers data:", data);
+                    setSuppliers([]);
+                }
+            })
+            .catch(err => {
+                console.error("Failed to fetch suppliers:", err);
+                setSuppliers([]);
+            });
     };
 
     const handleEdit = (supplier: Supplier) => {

@@ -5,7 +5,9 @@ const prisma = new PrismaClient();
 
 export async function GET() {
     try {
-        const suppliers = await prisma.$queryRaw`SELECT * FROM Supplier ORDER BY name ASC`;
+        const suppliers = await prisma.supplier.findMany({
+            orderBy: { name: 'asc' }
+        });
         return NextResponse.json(suppliers);
     } catch (error) {
         return NextResponse.json({ error: "Failed to fetch suppliers" }, { status: 500 });
