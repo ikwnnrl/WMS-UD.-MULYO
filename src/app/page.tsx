@@ -14,7 +14,8 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import ProductionTrendChart from "@/components/charts/ProductionTrendChart";
+import dynamic from "next/dynamic";
+const ProductionTrendChart = dynamic(() => import("@/components/charts/ProductionTrendChart"), { ssr: false });
 
 // Initialize Prisma
 const prisma = new PrismaClient();
