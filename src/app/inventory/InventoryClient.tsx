@@ -14,7 +14,7 @@ interface Product {
     category?: string;
     quantity: number;
     minStock: number;
-    description: string;
+    description: string | null;
     unit?: string;
 }
 
