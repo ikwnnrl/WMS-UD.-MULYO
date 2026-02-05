@@ -1,0 +1,155 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Product {
+  id           Int           @id @default(autoincrement())
+  name         String
+  sku          String        @unique // Bisa digenerate otomatis
+  category     String        @default("Barang Mentah") // 'Barang Mentah', 'Barang Jadi', 'Operasional'
+  type         String        // 'Putusan', 'Onggok', 'Gaplek', 'Lainnya'
+  quantity     Float         @default(0) // Menggunakan Float untuk mengakomodasi berat desimal
+  minStock     Float         @default(10)
+  description  String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  transactions Transaction[]
+}
+
+model Supplier {
+  id           Int           @id @default(autoincrement())
+  name         String
+  contact      String?
+  bankName     String?
+  accountNumber String?
+  priceTier1   Float         @default(0)
+  priceTier2   Float         @default(0)
+  priceTier3   Float         @default(0)
+  transactions Transaction[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+model Transaction {
+  id              Int      @id @default(autoincrement())
+  type            String   // 'IN' (Masuk), 'OUT' (Keluar)
+  
+  // Relasi ke Produk
+  productId       Int
+  product         Product  @relation(fields: [productId], references: [id])
+
+  // Relasi ke Supplier (Optional, biasanya untuk Inbound)
+  supplierId      Int?
+  supplier        Supplier? @relation(fields: [supplierId], references: [id])
+
+  // Data Kuantitas & Harga
+  quantity        Float    // Jumlah barang yang mempengaruhi stok (biasanya ikut Actual Weight)
+  pricePerKg      Float?   // Harga satuan
+  totalPrice      Float?   // Harga Total
+  
+  // Stock Snapshots (Log Audit)
+  initialStock    Float    @default(0)
+  finalStock      Float    @default(0)
+
+  // Data Berat (Inbound)
+  manifestWeight  Float?   // Berat Surat Jalan
+  actualWeight    Float?   // Berat Bongkar (Real)
+  weightDiff      Float?   // Selisih (Manifest - Actual)
+
+  // Data Logistik
+  driverName      String?  // Nama Supir (dulu Truck Name)
+  licensePlate    String?  // No Polisi
+  
+  // Data Lokasi
+  sourceWarehouse String?  // KHUSUS PUTUSAN: Asal Gudang
+  destinationWarehouse String? // Gudang Tujuan (Outbound)
+  poNumber        String?  // No PO
+  suratJalanNumber String? // No Surat Jalan (Dokumen)
+  
+  notes           String?
+  date            DateTime @default(now())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model CashFlow {
+  id          Int      @id @default(autoincrement())
+  type        String   // 'INCOME', 'EXPENSE'
+  amount      Float
+  category    String   // 'Listrik', 'Gaji', 'Sewa', 'Penjualan', 'Lainnya'
+  group       String   @default("OPERATIONAL") // 'PRODUCTION', 'OPERATIONAL', 'TRANSPORT', 'OTHER'
+  description String?
+  date        DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Employee {
+  id        Int      @id @default(autoincrement())
+  name      String
+  pin       String   @default("000000") // Default PIN for employees
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Attendance {
+  id          Int      @id @default(autoincrement())
+  date        DateTime @default(now()) // Only one record per date usually, or strictly date only
+  totalPresent Int
+  totalAbsent  Int
+  totalMealAllowance Float @default(0)
+  absentList   String   // JSON string or comma separated names of absent employees
+  details      String?  // JSON string: { "Name": "STATUS" } (STATUS: PRESENT, HALF_DAY, PERMIT, ALPHA)
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model ProductionLog {
+  id              Int      @id @default(autoincrement())
+  date            DateTime @default(now())
+  type            String   // 'Giling Onggok', 'Giling Putusan'
+  rawMaterialName String
+  rawMaterialQty  Float
+  finishedGoodName String
+  finishedGoodQty Float
+  solarQty        Float
+  rawMaterialPrice Float?  @default(0) // Harga per Kg
+  solarPrice      Float?   @default(6800) // Harga per Liter
+  otherCost       Float?   @default(0) // Biaya lain
+  totalCost       Float?   // Total HPP
+  hppPerKg        Float?   // HPP per unit barang jadi
+  notes           String?
+  createdAt       DateTime @default(now())
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  username  String   @unique
+  pin       String   // Simple PIN string
+  role      String   // 'OWNER', 'STAFF'
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  action    String   // 'CREATE', 'UPDATE', 'DELETE', 'LOGIN'
+  entity    String   // 'Transaction', 'Product', 'CashFlow', 'Attendance', 'ProductionLog'
+  entityId  Int?
+  actorName String   // Username or Employee Name
+  actorRole String   // 'OWNER' or 'STAFF'
+  details   String?
+  timestamp DateTime @default(now())
+}

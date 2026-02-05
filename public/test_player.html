@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CCTV Diagnostic Tool</title>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <style>
+        body { font-family: sans-serif; padding: 20px; background: #f0f0f0; }
+        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+        .box { background: #000; padding: 5px; border-radius: 8px; overflow: hidden; }
+        video { width: 100%; height: auto; display: block; }
+        .label { color: #fff; background: #333; padding: 5px; text-align: center; font-size: 12px; }
+        .error { color: #ff5555; padding: 10px; text-align: center; }
+    </style>
+</head>
+<body>
+    <h1>CCTV Diagnostic Tool (No React)</h1>
+    <p>Jika video di sini bisa diputar, berarti masalah ada di kode React/Next.js. Jika di sini juga mati, berarti link diblokir browser (CORS) atau jaringan.</p>
+    
+    <div class="grid">
+        <!-- TEST URL -->
+        <div class="box">
+            <div class="label">TEST STREAM (MUX)</div>
+            <video id="videoTest" controls muted autoplay></video>
+        </div>
+
+        <!-- CHANNEL 6 REDIRECT -->
+        <div class="box">
+            <div class="label">CHANNEL 6 (Redirected)</div>
+            <video id="video6" controls muted autoplay></video>
+        </div>
+    </div>
+
+    <script>
+        function loadStream(id, url) {
+            var video = document.getElementById(id);
+            if (Hls.isSupported()) {
+                var hls = new Hls();
+                hls.loadSource(url);
+                hls.attachMedia(video);
+                hls.on(Hls.Events.MANIFEST_PARSED, function() {
+                    video.play().catch(e => console.log("Autoplay blocked", e));
+                });
+                hls.on(Hls.Events.ERROR, function(event, data) {
+                    console.error("HLS Error on " + id + ":", data);
+                });
+            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                video.src = url;
+                video.addEventListener('loadedmetadata', function() {
+                    video.play();
+                });
+            }
+        }
+
+        // 1. Load Test Stream
+        loadStream('videoTest', 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8');
+
+        // 2. Load Channel 6 (Redirected)
+        loadStream('video6', 'https://vtmjakarta.ezvizlife.com:8883/v3/openlive/FY2936828_6_1.m3u8?expire=1832428805&id=939309370144555008&c=4ec4ebb6a7&t=8d27535505086aa4568ddf25f1b401f4a55b7d0326b06fb713aa6435f475e099&ev=100&u=2f109a26ea4148ef8e0ea65bcd21fff0');
+    </script>
+</body>
+</html>

@@ -1,0 +1,127 @@
+@import "tailwindcss";
+
+@variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: var(--font-inter);
+}
+
+@layer base {
+  :root {
+    /* Brand Colors (Premium Gold) */
+    --primary: 212 175 55;
+    /* #D4AF37 (Gold) */
+    --primary-foreground: 255 255 255;
+
+    /* Neutral / Surface Colors (Light Mode) */
+    --background: 255 255 255;
+    /* Pure White */
+    --surface: 248 248 248;
+    /* Off-white for cards */
+    --surface-hover: 240 240 240;
+    --border: 229 229 229;
+
+    /* Text Colors */
+    --text-primary: 0 0 0;
+    /* Pure Black text */
+    --text-secondary: 82 82 82;
+    /* Dark Gray */
+
+    /* Status Colors */
+    --success: 16 185 129;
+    --warning: 245 158 11;
+    --danger: 239 68 68;
+
+    /* Radius */
+    --radius-sm: 0.5rem;
+    --radius-md: 0.75rem;
+    --radius-lg: 1rem;
+    --radius-xl: 1.5rem;
+  }
+
+  .dark {
+    /* Brand Colors (Premium Gold) */
+    --primary: 212 175 55;
+    /* #D4AF37 */
+    --primary-foreground: 0 0 0;
+    /* Black text on gold is premium */
+
+    /* Neutral / Surface Colors (Dark Mode) */
+    --background: 0 0 0;
+    /* Pure Black */
+    --surface: 20 20 20;
+    /* Very deep charcoal for cards */
+    --surface-hover: 30 30 30;
+    --border: 40 40 40;
+
+    /* Text Colors */
+    --text-primary: 255 255 255;
+    --text-secondary: 163 163 163;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-[color:rgb(var(--border))];
+  }
+
+  body {
+    @apply bg-[color:rgb(var(--background))] text-[color:rgb(var(--text-primary))] antialiased selection:bg-[color:rgb(var(--primary))]/30 selection:text-[color:rgb(var(--primary))];
+  }
+}
+
+@layer components {
+
+  /* Glassmorphism Utilities (Updated for Gold Theme) */
+  .glass {
+    @apply bg-white/80 dark:bg-black/80 backdrop-blur-xl border border-black/5 dark:border-white/10 shadow-sm;
+  }
+
+  .glass-card {
+    @apply bg-white dark:bg-[#111111] border border-black/5 dark:border-white/10 shadow-sm rounded-[var(--radius-lg)] p-6;
+  }
+
+  /* Modern Scrollbar */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-neutral-200 dark:bg-neutral-800 rounded-full hover:bg-neutral-300 dark:hover:bg-neutral-700 transition-colors;
+  }
+
+  /* Smooth Inputs */
+  .input-modern {
+    @apply bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 rounded-xl px-5 py-2.5 outline-none focus:ring-1 focus:ring-[color:rgb(var(--primary))] focus:border-[color:rgb(var(--primary))] transition-all placeholder:text-neutral-400;
+  }
+
+  /* Custom Select Arrow */
+  select.input-modern {
+    @apply appearance-none bg-no-repeat pr-12 cursor-pointer;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='2' stroke='%23525252'%3e%3cpath stroke-linecap='round' stroke-linejoin='round' d='M19.5 8.25l-7.5 7.5-7.5-7.5' /%3e%3c/svg%3e");
+    background-position: right 1.25rem center;
+    background-size: 1.2rem;
+  }
+
+  :is(.dark select.input-modern) {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='2' stroke='%23a3a3a3'%3e%3cpath stroke-linecap='round' stroke-linejoin='round' d='M19.5 8.25l-7.5 7.5-7.5-7.5' /%3e%3c/svg%3e");
+  }
+
+  /* Buttons */
+  .btn-primary {
+    @apply bg-[color:rgb(var(--primary))] hover:bg-[color:rgb(var(--primary))]/90 text-white dark:text-black font-bold px-4 py-2.5 rounded-xl shadow-lg shadow-[color:rgb(var(--primary))]/20 active:scale-95 transition-all flex items-center gap-2 justify-center;
+  }
+
+  .btn-secondary {
+    @apply bg-white dark:bg-neutral-900/50 hover:bg-neutral-50 dark:hover:bg-neutral-800 text-neutral-800 dark:text-neutral-200 border border-neutral-200 dark:border-neutral-800 font-medium px-4 py-2.5 rounded-xl shadow-sm active:scale-95 transition-all flex items-center gap-2 justify-center;
+  }
+
+  .btn-danger {
+    @apply bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/20 font-medium px-4 py-2.5 rounded-xl active:scale-95 transition-all flex items-center gap-2 justify-center;
+  }
+}
