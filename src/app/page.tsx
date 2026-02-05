@@ -64,6 +64,8 @@ async function getStats() {
     return { totalProducts, lowStockCount, recentTransactions, topProducts, chartData };
 }
 
+import CurrentDate from "@/components/common/CurrentDate";
+
 export default async function Dashboard() {
     const { totalProducts, lowStockCount, recentTransactions, topProducts, chartData } = await getStats();
 
@@ -82,7 +84,7 @@ export default async function Dashboard() {
                 <div className="flex gap-3">
                     <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2 text-sm text-slate-500 font-medium flex items-center gap-2">
                         <Calendar size={16} />
-                        {new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                        <CurrentDate />
                     </div>
                 </div>
             </div>
