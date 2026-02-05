@@ -89,7 +89,7 @@ export function CommandMenu({ user }: { user?: { name: string, role: string } })
                         <Command.Group heading="Utama" className="text-xs font-bold text-neutral-500 mb-2 px-2 uppercase tracking-wide">
                             {hasAccess('/') && (
                                 <Command.Item
-                                    onSelect={() => runCommand(() => router.push("/dashboard"))}
+                                    onSelect={() => runCommand(() => router.push("/"))}
                                     className="flex items-center gap-2 px-2 py-2.5 rounded-lg text-sm text-neutral-700 dark:text-neutral-200 cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-900 aria-selected:bg-amber-50 dark:aria-selected:bg-amber-900/30 aria-selected:text-amber-600 dark:aria-selected:text-amber-400 transition-colors"
                                     value="dashboard home beranda"
                                 >
