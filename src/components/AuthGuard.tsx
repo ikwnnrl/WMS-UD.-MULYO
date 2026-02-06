@@ -31,7 +31,7 @@ export default function AuthGuard({
                 return;
             }
 
-            // Restrict Staff Access
+            // Restrict Staff & Driver Access
             if (session.role !== 'OWNER') {
                 // List of allowed paths (prefixes)
                 const allowedPrefixes = [

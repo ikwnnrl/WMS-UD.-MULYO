@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 
 export default function LoginPage() {
     const router = useRouter();
-    const [view, setView] = useState<'STAFF' | 'OWNER'>('STAFF');
+    const [view, setView] = useState<'STAFF' | 'OWNER' | 'DRIVER'>('STAFF');
 
     // Wrapper to handle login logic
     const handleLoginSubmit = async (username: string, pin: string) => {
@@ -58,27 +58,40 @@ export default function LoginPage() {
                     <button
                         onClick={() => setView('STAFF')}
                         className={cn(
-                            "flex-1 py-2.5 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2",
+                            "flex-1 py-2.5 text-xs md:text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2",
                             view === 'STAFF' ? "bg-white dark:bg-slate-800 shadow text-blue-600 dark:text-blue-400" : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
                         )}
                     >
-                        <Users size={18} /> Karyawan
+                        <Users size={16} /> Staff
+                    </button>
+                    <button
+                        onClick={() => setView('DRIVER')}
+                        className={cn(
+                            "flex-1 py-2.5 text-xs md:text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2",
+                            view === 'DRIVER' ? "bg-white dark:bg-slate-800 shadow text-emerald-600 dark:text-emerald-400" : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                        )}
+                    >
+                        <User size={16} /> Driver
                     </button>
                     <button
                         onClick={() => setView('OWNER')}
                         className={cn(
-                            "flex-1 py-2.5 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2",
+                            "flex-1 py-2.5 text-xs md:text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2",
                             view === 'OWNER' ? "bg-white dark:bg-slate-800 shadow text-orange-600 dark:text-orange-400" : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
                         )}
                     >
-                        <ShieldCheck size={18} /> Owner
+                        <ShieldCheck size={16} /> Owner
                     </button>
                 </div>
 
-                {view === 'OWNER' ? (
-                    <OwnerLoginForm onLogin={handleLoginSubmit} />
-                ) : (
+                {view === 'STAFF' ? (
                     <StaffLoginGrid onLogin={handleLoginSubmit} />
+                ) : (
+                    <OwnerLoginForm
+                        onLogin={handleLoginSubmit}
+                        roleLabel={view === 'OWNER' ? "Owner" : "Driver"}
+                        colorClass={view === 'OWNER' ? "from-orange-500 to-red-600" : "from-emerald-500 to-teal-600"}
+                    />
                 )}
 
                 <div className="mt-8 text-center border-t border-slate-100 dark:border-slate-800 pt-6">
@@ -91,8 +104,8 @@ export default function LoginPage() {
     );
 }
 
-// Owner Form Component
-function OwnerLoginForm({ onLogin }: { onLogin: (u: string, p: string) => Promise<boolean> }) {
+// Owner/Driver Form Component
+function OwnerLoginForm({ onLogin, roleLabel, colorClass }: { onLogin: (u: string, p: string) => Promise<boolean>, roleLabel: string, colorClass: string }) {
     const [username, setUsername] = useState("");
     const [pin, setPin] = useState("");
     const [loading, setLoading] = useState(false);
@@ -118,13 +131,13 @@ function OwnerLoginForm({ onLogin }: { onLogin: (u: string, p: string) => Promis
                 </div>
             )}
             <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2 ml-1">Username Owner</label>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2 ml-1">Username {roleLabel}</label>
                 <div className="relative group">
                     <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={18} />
                     <input
                         type="text"
                         className="input-modern w-full pl-11 py-3"
-                        placeholder="owner"
+                        placeholder={roleLabel.toLowerCase()}
                         value={username}
                         onChange={(e) => setUsername(e.target.value)}
                         required
@@ -151,9 +164,9 @@ function OwnerLoginForm({ onLogin }: { onLogin: (u: string, p: string) => Promis
             <button
                 type="submit"
                 disabled={loading || !username || !pin}
-                className="btn-primary w-full py-3.5 shadow-lg shadow-indigo-500/20 bg-gradient-to-r from-orange-500 to-red-600 border-none hover:from-orange-600 hover:to-red-700"
+                className={`btn-primary w-full py-3.5 shadow-lg border-none bg-gradient-to-r ${colorClass} hover:opacity-90`}
             >
-                {loading ? <Loader2 className="animate-spin" /> : <>Masuk sebagai Owner <ArrowRight size={18} /></>}
+                {loading ? <Loader2 className="animate-spin" /> : <>Masuk sebagai {roleLabel} <ArrowRight size={18} /></>}
             </button>
         </form>
     );

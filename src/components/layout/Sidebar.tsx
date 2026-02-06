@@ -54,8 +54,9 @@ export function Sidebar({ user }: { user?: { name: string, role: string } }) {
     // Grouping links for clearer navigation
     const filteredLinks = links.filter(link => {
         if (isOwner) return true;
-        const staffAllowed = ['/daily-log', '/production-report', '/attendance', '/'];
-        return staffAllowed.includes(link.href);
+        // Staff & Driver allowed links
+        const allowed = ['/daily-log', '/production-report', '/attendance', '/'];
+        return allowed.includes(link.href);
     });
 
     return (

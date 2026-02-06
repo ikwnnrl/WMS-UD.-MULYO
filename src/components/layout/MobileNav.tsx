@@ -32,9 +32,9 @@ export function MobileNav({ user }: { user?: { name: string, role: string } }) {
     const filteredNavItems = allNavItems.filter(item => {
         if (isOwner) return true;
 
-        // Staff logic
-        const staffAllowed = ['/daily-log', '/production-report', '/attendance', '/'];
-        return staffAllowed.includes(item.href);
+        // Staff & Driver logic
+        const allowed = ['/daily-log', '/production-report', '/attendance', '/'];
+        return allowed.includes(item.href);
     });
 
     return (
