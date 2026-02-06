@@ -100,9 +100,9 @@ export default function LoginPage() {
                         <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800 flex flex-col items-center gap-4">
                             <button
                                 onClick={() => setShowChangePin(true)}
-                                className="text-sm text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 flex items-center gap-2 transition-colors font-medium"
+                                className="w-full py-3 rounded-xl border border-dashed border-indigo-300 dark:border-indigo-700 text-sm text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 flex items-center justify-center gap-2 transition-all font-bold"
                             >
-                                <KeyRound size={14} /> Ubah PIN Akses?
+                                <KeyRound size={16} /> Ubah PIN Akses
                             </button>
                             <p className="text-xs text-slate-400 dark:text-slate-600">
                                 &copy; {new Date().getFullYear()} WMS Indo System v2.0
