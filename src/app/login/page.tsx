@@ -2,25 +2,47 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-// ... imports ...
 import { User, Lock, Loader2, ArrowRight, ArrowLeft, Users, ShieldCheck, Warehouse, KeyRound } from "lucide-react";
-// ... existing code ...
+import { cn } from "@/lib/utils";
 
 export default function LoginPage() {
     const router = useRouter();
     const [view, setView] = useState<'STAFF' | 'OWNER' | 'DRIVER'>('STAFF');
     const [showChangePin, setShowChangePin] = useState(false);
 
-    // ... handleLoginSubmit ...
+    // Wrapper to handle login logic
+    const handleLoginSubmit = async (username: string, pin: string) => {
+        try {
+            const res = await fetch("/api/auth/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ username, pin }),
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                throw new Error(data.error || "Login gagal");
+            }
+
+            router.push("/");
+            router.refresh();
+            return true;
+        } catch (err: any) {
+            throw err;
+        }
+    };
 
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-4 relative overflow-hidden">
-            {/* ... Background ... */}
+            {/* Background Decoration */}
+            <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+                <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-500/10 rounded-full blur-[100px]" />
+                <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-indigo-500/10 rounded-full blur-[100px]" />
+            </div>
 
             <div className="w-full max-w-md relative z-10 glass-card shadow-2xl shadow-indigo-500/10 border-white/50 dark:border-slate-800">
-                {/* ... Header ... */}
                 <div className="text-center mb-8">
-                    {/* ... Logo ... */}
                     <div className="inline-flex items-center justify-center p-4 bg-indigo-600 rounded-2xl shadow-lg shadow-indigo-500/30 mb-4">
                         <Warehouse className="text-white" size={32} />
                     </div>
@@ -36,10 +58,33 @@ export default function LoginPage() {
                     <>
                         {/* Role Toggles */}
                         <div className="flex p-1.5 bg-slate-100 dark:bg-slate-900 rounded-xl mb-8">
-                            {/* ... Buttons for STAFF, DRIVER, OWNER ... */}
-                            <button onClick={() => setView('STAFF')} className={cn("flex-1 py-2.5 text-xs md:text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2", view === 'STAFF' ? "bg-white dark:bg-slate-800 shadow text-blue-600 dark:text-blue-400" : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300")}> <Users size={16} /> Staff </button>
-                            <button onClick={() => setView('DRIVER')} className={cn("flex-1 py-2.5 text-xs md:text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2", view === 'DRIVER' ? "bg-white dark:bg-slate-800 shadow text-emerald-600 dark:text-emerald-400" : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300")}> <User size={16} /> Driver </button>
-                            <button onClick={() => setView('OWNER')} className={cn("flex-1 py-2.5 text-xs md:text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2", view === 'OWNER' ? "bg-white dark:bg-slate-800 shadow text-orange-600 dark:text-orange-400" : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300")}> <ShieldCheck size={16} /> Owner </button>
+                            <button
+                                onClick={() => setView('STAFF')}
+                                className={cn(
+                                    "flex-1 py-2.5 text-xs md:text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2",
+                                    view === 'STAFF' ? "bg-white dark:bg-slate-800 shadow text-blue-600 dark:text-blue-400" : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                                )}
+                            >
+                                <Users size={16} /> Staff
+                            </button>
+                            <button
+                                onClick={() => setView('DRIVER')}
+                                className={cn(
+                                    "flex-1 py-2.5 text-xs md:text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2",
+                                    view === 'DRIVER' ? "bg-white dark:bg-slate-800 shadow text-emerald-600 dark:text-emerald-400" : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                                )}
+                            >
+                                <User size={16} /> Driver
+                            </button>
+                            <button
+                                onClick={() => setView('OWNER')}
+                                className={cn(
+                                    "flex-1 py-2.5 text-xs md:text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2",
+                                    view === 'OWNER' ? "bg-white dark:bg-slate-800 shadow text-orange-600 dark:text-orange-400" : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                                )}
+                            >
+                                <ShieldCheck size={16} /> Owner
+                            </button>
                         </div>
 
                         {view === 'STAFF' ? (
@@ -70,145 +115,6 @@ export default function LoginPage() {
             </div>
         </div>
     );
-}
-
-// ... OwnerLoginForm and StaffLoginGrid ...
-
-// Change PIN Component
-function ChangePinForm({ onCancel }: { onCancel: () => void }) {
-    const [roleType, setRoleType] = useState<'STAFF' | 'OWNER' | 'DRIVER'>('STAFF');
-    const [username, setUsername] = useState("");
-    const [oldPin, setOldPin] = useState("");
-    const [newPin, setNewPin] = useState("");
-    const [loading, setLoading] = useState(false);
-    const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setLoading(true);
-        setMessage(null);
-
-        try {
-            const res = await fetch('/api/auth/change-pin', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    username,
-                    oldPin,
-                    newPin,
-                    roleType: roleType === 'STAFF' ? 'STAFF' : 'USER' // Send specific type logic
-                })
-            });
-
-            const data = await res.json();
-
-            if (!res.ok) {
-                throw new Error(data.error || "Gagal mengubah PIN");
-            }
-
-            setMessage({ type: 'success', text: 'PIN Berhasil diubah! Silakan login ulang.' });
-            setTimeout(() => {
-                onCancel();
-            }, 2000);
-
-        } catch (err: any) {
-            setMessage({ type: 'error', text: err.message });
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    return (
-        <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
-            <button
-                onClick={onCancel}
-                className="mb-6 text-sm text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 flex items-center gap-1"
-            >
-                <ArrowLeft size={16} /> Kembali ke Login
-            </button>
-
-            <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-1">Ubah PIN Akses</h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">Masukkan PIN lama untuk verifikasi.</p>
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-                {message && (
-                    <div className={cn(
-                        "p-3 rounded-xl text-sm font-medium flex items-center justify-center gap-2",
-                        message.type === 'success' ? "bg-green-50 text-green-600 border border-green-200" : "bg-red-50 text-red-600 border border-red-200"
-                    )}>
-                        {message.type === 'success' ? <ShieldCheck size={16} /> : <Lock size={16} />}
-                        {message.text}
-                    </div>
-                )}
-
-                <div>
-                    <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5 ml-1">Tipe Akun</label>
-                    <div className="flex bg-slate-100 dark:bg-slate-900 rounded-lg p-1">
-                        {['STAFF', 'DRIVER', 'OWNER'].map((r) => (
-                            <button
-                                key={r}
-                                type="button"
-                                onClick={() => setRoleType(r as any)}
-                                className={cn(
-                                    "flex-1 py-1.5 text-xs font-bold rounded-md transition-all",
-                                    roleType === r ? "bg-white dark:bg-slate-800 shadow text-indigo-600" : "text-slate-400 hover:text-slate-600"
-                                )}
-                            >
-                                {r}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-
-                <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5 ml-1">Username / Nama</label>
-                    <input
-                        type="text"
-                        required
-                        className="input-modern w-full"
-                        placeholder={roleType === 'STAFF' ? "Nama Staff (Contoh: Budi)" : "Username (Contoh: agus)"}
-                        value={username}
-                        onChange={e => setUsername(e.target.value)}
-                    />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5 ml-1">PIN Lama</label>
-                        <input
-                            type="password"
-                            required
-                            maxLength={6}
-                            placeholder="••••••"
-                            className="input-modern w-full font-mono tracking-widest"
-                            value={oldPin}
-                            onChange={e => setOldPin(e.target.value)}
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5 ml-1">PIN Baru</label>
-                        <input
-                            type="password"
-                            required
-                            maxLength={6}
-                            placeholder="••••••"
-                            className="input-modern w-full font-mono tracking-widest border-indigo-200 focus:border-indigo-500"
-                            value={newPin}
-                            onChange={e => setNewPin(e.target.value)}
-                        />
-                    </div>
-                </div>
-
-                <button
-                    type="submit"
-                    disabled={loading || !username || !oldPin || !newPin}
-                    className="btn-primary w-full py-3 mt-2 bg-indigo-600 hover:bg-indigo-700 text-white"
-                >
-                    {loading ? <Loader2 className="animate-spin" /> : "Simpan PIN Baru"}
-                </button>
-            </form>
-        </div>
-    )
 }
 
 // Owner/Driver Form Component
@@ -385,4 +291,141 @@ function StaffLoginGrid({ onLogin }: { onLogin: (u: string, p: string) => Promis
             </div>
         </div>
     );
+}
+
+// Change PIN Component
+function ChangePinForm({ onCancel }: { onCancel: () => void }) {
+    const [roleType, setRoleType] = useState<'STAFF' | 'OWNER' | 'DRIVER'>('STAFF');
+    const [username, setUsername] = useState("");
+    const [oldPin, setOldPin] = useState("");
+    const [newPin, setNewPin] = useState("");
+    const [loading, setLoading] = useState(false);
+    const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setLoading(true);
+        setMessage(null);
+
+        try {
+            const res = await fetch('/api/auth/change-pin', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    username,
+                    oldPin,
+                    newPin,
+                    roleType: roleType === 'STAFF' ? 'STAFF' : 'USER' // Send specific type logic
+                })
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                throw new Error(data.error || "Gagal mengubah PIN");
+            }
+
+            setMessage({ type: 'success', text: 'PIN Berhasil diubah! Silakan login ulang.' });
+            setTimeout(() => {
+                onCancel();
+            }, 2000);
+
+        } catch (err: any) {
+            setMessage({ type: 'error', text: err.message });
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
+            <button
+                onClick={onCancel}
+                className="mb-6 text-sm text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 flex items-center gap-1"
+            >
+                <ArrowLeft size={16} /> Kembali ke Login
+            </button>
+
+            <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-1">Ubah PIN Akses</h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">Masukkan PIN lama untuk verifikasi.</p>
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+                {message && (
+                    <div className={cn(
+                        "p-3 rounded-xl text-sm font-medium flex items-center justify-center gap-2",
+                        message.type === 'success' ? "bg-green-50 text-green-600 border border-green-200" : "bg-red-50 text-red-600 border border-red-200"
+                    )}>
+                        {message.type === 'success' ? <ShieldCheck size={16} /> : <Lock size={16} />}
+                        {message.text}
+                    </div>
+                )}
+
+                <div>
+                    <label className="block text-xs font-bold uppercase text-slate-500 mb-1.5 ml-1">Tipe Akun</label>
+                    <div className="flex bg-slate-100 dark:bg-slate-900 rounded-lg p-1">
+                        {['STAFF', 'DRIVER', 'OWNER'].map((r) => (
+                            <button
+                                key={r}
+                                type="button"
+                                onClick={() => setRoleType(r as any)}
+                                className={cn(
+                                    "flex-1 py-1.5 text-xs font-bold rounded-md transition-all",
+                                    roleType === r ? "bg-white dark:bg-slate-800 shadow text-indigo-600" : "text-slate-400 hover:text-slate-600"
+                                )}
+                            >
+                                {r}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5 ml-1">Username / Nama</label>
+                    <input
+                        type="text"
+                        required
+                        className="input-modern w-full"
+                        placeholder={roleType === 'STAFF' ? "Nama Staff (Contoh: Budi)" : "Username (Contoh: agus)"}
+                        value={username}
+                        onChange={e => setUsername(e.target.value)}
+                    />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5 ml-1">PIN Lama</label>
+                        <input
+                            type="password"
+                            required
+                            maxLength={6}
+                            placeholder="••••••"
+                            className="input-modern w-full font-mono tracking-widest"
+                            value={oldPin}
+                            onChange={e => setOldPin(e.target.value)}
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5 ml-1">PIN Baru</label>
+                        <input
+                            type="password"
+                            required
+                            maxLength={6}
+                            placeholder="••••••"
+                            className="input-modern w-full font-mono tracking-widest border-indigo-200 focus:border-indigo-500"
+                            value={newPin}
+                            onChange={e => setNewPin(e.target.value)}
+                        />
+                    </div>
+                </div>
+
+                <button
+                    type="submit"
+                    disabled={loading || !username || !oldPin || !newPin}
+                    className="btn-primary w-full py-3 mt-2 bg-indigo-600 hover:bg-indigo-700 text-white"
+                >
+                    {loading ? <Loader2 className="animate-spin" /> : "Simpan PIN Baru"}
+                </button>
+            </form>
+        </div>
+    )
 }

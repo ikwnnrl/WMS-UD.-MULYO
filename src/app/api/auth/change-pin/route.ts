@@ -65,7 +65,7 @@ export async function POST(request: Request) {
         }
 
         if (isUpdated) {
-            await createAuditLog('UPDATE', 'Auth', userIdForLog, `User ${username} changed PIN`, { role: userRoleForLog });
+            await createAuditLog('UPDATE', 'Auth', userIdForLog, `User ${username} changed PIN`, { username: username, role: userRoleForLog });
             return NextResponse.json({ success: true, message: "PIN berhasil diubah." });
         }
 
