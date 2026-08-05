@@ -1,6 +1,7 @@
 
 import { NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
+import { hashPin } from "@/lib/auth";
 
 const prisma = new PrismaClient();
 
@@ -14,9 +15,10 @@ export async function GET() {
         let employees = await prisma.employee.findMany();
 
         if (employees.length === 0) {
-            // Seed initial data
+            // Seed initial data with a hashed default PIN (not plaintext "000000")
+            const defaultPinHash = await hashPin("000000");
             await prisma.employee.createMany({
-                data: PREDEFINED_EMPLOYEES.map(name => ({ name }))
+                data: PREDEFINED_EMPLOYEES.map(name => ({ name, pin: defaultPinHash }))
             });
             employees = await prisma.employee.findMany();
         }

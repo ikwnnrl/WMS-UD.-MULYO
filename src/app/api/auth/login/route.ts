@@ -1,11 +1,29 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { createAuditLog } from "@/lib/audit";
+import { verifyPin, checkLockout, recordLoginAttempt } from "@/lib/auth";
 
 export async function POST(request: Request) {
     try {
         const { username, pin } = await request.json();
+
+        if (!username || !pin) {
+            return NextResponse.json({ error: "Username dan PIN wajib diisi." }, { status: 400 });
+        }
+
+        // Rate-limit check: block brute-force attempts on this username
+        const lockoutSeconds = await checkLockout(username);
+        if (lockoutSeconds > 0) {
+            const minutes = Math.ceil(lockoutSeconds / 60);
+            return NextResponse.json(
+                { error: `Terlalu banyak percobaan gagal. Coba lagi dalam ${minutes} menit.` },
+                { status: 429 }
+            );
+        }
+
+        const headersList = await headers();
+        const ipAddress = headersList.get("x-forwarded-for") || headersList.get("x-real-ip") || undefined;
 
         // 1. Check Owner/Admin User Table
         const user = await prisma.user.findUnique({
@@ -14,7 +32,7 @@ export async function POST(request: Request) {
 
         let sessionUser = null;
 
-        if (user && user.pin === pin) {
+        if (user && (await verifyPin(pin, user.pin))) {
             sessionUser = {
                 id: user.id,
                 username: user.username,
@@ -28,7 +46,7 @@ export async function POST(request: Request) {
                 where: { name: username }
             });
 
-            if (employee && (employee as any).pin === pin && employee.isActive) {
+            if (employee && employee.isActive && (await verifyPin(pin, (employee as any).pin))) {
                 sessionUser = {
                     id: employee.id,
                     username: employee.name, // Use name as username
@@ -37,6 +55,9 @@ export async function POST(request: Request) {
                 };
             }
         }
+
+        // Record the attempt for rate-limiting (fire-and-forget style, but awaited to keep it simple)
+        await recordLoginAttempt(username, !!sessionUser, ipAddress);
 
         if (!sessionUser) {
             return NextResponse.json({ error: "Username atau PIN salah" }, { status: 401 });

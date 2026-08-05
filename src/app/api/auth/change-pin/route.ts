@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { createAuditLog } from "@/lib/audit";
+import { verifyPin, hashPin } from "@/lib/auth";
 
 export async function POST(request: Request) {
     try {
@@ -13,6 +14,7 @@ export async function POST(request: Request) {
         let isUpdated = false;
         let userIdForLog = null;
         let userRoleForLog = "";
+        const newPinHashed = await hashPin(newPin);
 
         // 1. Handle STAFF (Employee Table)
         if (roleType === 'STAFF') {
@@ -24,16 +26,15 @@ export async function POST(request: Request) {
                 return NextResponse.json({ error: "Karyawan tidak ditemukan." }, { status: 404 });
             }
 
-            // Verify Old PIN
-            // Note: In a real app, hash this. Here using plain text as per existing pattern.
-            if ((employee as any).pin !== oldPin) {
+            // Verify Old PIN (supports both bcrypt hash and legacy plaintext)
+            if (!(await verifyPin(oldPin, (employee as any).pin))) {
                 return NextResponse.json({ error: "PIN Lama salah." }, { status: 401 });
             }
 
-            // Update
+            // Update with hashed PIN
             await prisma.employee.update({
                 where: { id: employee.id },
-                data: { pin: newPin }
+                data: { pin: newPinHashed }
             });
 
             isUpdated = true;
@@ -50,13 +51,13 @@ export async function POST(request: Request) {
                 return NextResponse.json({ error: "User tidak ditemukan." }, { status: 404 });
             }
 
-            if (user.pin !== oldPin) {
+            if (!(await verifyPin(oldPin, user.pin))) {
                 return NextResponse.json({ error: "PIN Lama salah." }, { status: 401 });
             }
 
             await prisma.user.update({
                 where: { id: user.id },
-                data: { pin: newPin }
+                data: { pin: newPinHashed }
             });
 
             isUpdated = true;
