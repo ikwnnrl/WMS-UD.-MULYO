@@ -23,7 +23,12 @@ export async function GET() {
             employees = await prisma.employee.findMany();
         }
 
-        return NextResponse.json(employees);
+        // This endpoint is public (used by the login page to render the staff
+        // picker before authentication), so never leak PIN hashes or other
+        // sensitive fields here — only what the picker UI needs.
+        const safeEmployees = employees.map(({ id, name, isActive }) => ({ id, name, isActive }));
+
+        return NextResponse.json(safeEmployees);
     } catch (error) {
         return NextResponse.json({ error: "Failed to fetch employees" }, { status: 500 });
     }
