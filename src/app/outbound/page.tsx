@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Save, Loader2, ArrowUpRight, Truck, User, FileText, Calendar, Box, Printer, Receipt, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Save, Loader2, ArrowUpRight, Truck, User, FileText, Calendar, Box, Printer, Receipt, CheckCircle2, X } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
@@ -34,6 +34,11 @@ export default function OutboundPage() {
         suratJalanNumber: string | null;
     } | null>(null);
     const [creatingInvoice, setCreatingInvoice] = useState(false);
+
+    // Quick-add pelanggan baru (mirror menambah baris di MASTER!A:B)
+    const [showAddCustomer, setShowAddCustomer] = useState(false);
+    const [savingCustomer, setSavingCustomer] = useState(false);
+    const [newCustomer, setNewCustomer] = useState({ name: "", address: "", npwp: "" });
 
     // Form State
     const [formData, setFormData] = useState({
@@ -163,6 +168,30 @@ export default function OutboundPage() {
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
+    const handleSaveCustomer = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!newCustomer.name.trim()) return;
+        setSavingCustomer(true);
+        try {
+            const res = await fetch('/api/customers', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newCustomer),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "Gagal menyimpan pelanggan");
+
+            setCustomers(prev => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
+            setFormData(prev => ({ ...prev, customerId: String(data.id) }));
+            setShowAddCustomer(false);
+            setNewCustomer({ name: "", address: "", npwp: "" });
+        } catch (err: any) {
+            alert(err.message || "Gagal menyimpan pelanggan.");
+        } finally {
+            setSavingCustomer(false);
+        }
+    };
+
     return (
         <div className="max-w-5xl mx-auto space-y-8 pb-20">
             <div className="flex items-center gap-4">
@@ -238,7 +267,16 @@ export default function OutboundPage() {
                                 </div>
                             </div>
                             <div className="space-y-1">
-                                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 block">Ke (Pelanggan)</label>
+                                <div className="flex items-center justify-between">
+                                    <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 block">Ke (Pelanggan)</label>
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowAddCustomer(true)}
+                                        className="text-[11px] font-bold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400"
+                                    >
+                                        + Pelanggan Baru
+                                    </button>
+                                </div>
                                 <select
                                     name="customerId"
                                     value={formData.customerId}
@@ -466,6 +504,66 @@ export default function OutboundPage() {
                         >
                             <ArrowUpRight size={16} /> Input Transaksi Baru
                         </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal quick-add pelanggan baru (mirror menambah baris MASTER!A:B) */}
+            {showAddCustomer && (
+                <div
+                    className="fixed inset-0 bg-slate-900/50 flex items-center justify-center p-4 z-50 backdrop-blur-md"
+                    onClick={() => setShowAddCustomer(false)}
+                >
+                    <div
+                        className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl border border-white/20 dark:border-slate-800"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-4">
+                            <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100">Pelanggan Baru</h2>
+                            <button onClick={() => setShowAddCustomer(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                                <X size={22} />
+                            </button>
+                        </div>
+                        <form onSubmit={handleSaveCustomer} className="space-y-4 pt-2">
+                            <div>
+                                <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 block">Nama Pelanggan</label>
+                                <input
+                                    type="text"
+                                    required
+                                    className="input-modern w-full"
+                                    value={newCustomer.name}
+                                    onChange={e => setNewCustomer({ ...newCustomer, name: e.target.value })}
+                                    placeholder="Contoh: PT. Menara Laut Bersatu"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 block">Alamat</label>
+                                <textarea
+                                    className="input-modern w-full h-20 resize-none"
+                                    value={newCustomer.address}
+                                    onChange={e => setNewCustomer({ ...newCustomer, address: e.target.value })}
+                                    placeholder="Alamat lengkap pelanggan..."
+                                />
+                            </div>
+                            <div>
+                                <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 block">NPWP (Opsional)</label>
+                                <input
+                                    type="text"
+                                    className="input-modern w-full font-mono"
+                                    value={newCustomer.npwp}
+                                    onChange={e => setNewCustomer({ ...newCustomer, npwp: e.target.value })}
+                                    placeholder="Contoh: 0810 9774 0550 1000"
+                                />
+                            </div>
+                            <div className="flex gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
+                                <button type="button" onClick={() => setShowAddCustomer(false)} className="btn-secondary flex-1">
+                                    Batal
+                                </button>
+                                <button type="submit" disabled={savingCustomer} className="btn-primary flex-1">
+                                    {savingCustomer ? <Loader2 className="animate-spin" size={18} /> : "Simpan"}
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             )}

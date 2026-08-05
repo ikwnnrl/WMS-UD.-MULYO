@@ -14,6 +14,7 @@ interface Product {
     category?: string;
     quantity: number;
     minStock: number;
+    pricePerKg?: number | null;
     description: string | null;
     unit?: string;
 }
@@ -47,6 +48,7 @@ export default function InventoryClient({ initialProducts }: { initialProducts: 
         category: "Barang Mentah",
         type: "Putusan",
         minStock: "10",
+        pricePerKg: "",
         description: "",
         quantity: "0"
     });
@@ -94,6 +96,7 @@ export default function InventoryClient({ initialProducts }: { initialProducts: 
             category: product.category || "Barang Mentah",
             type: product.type,
             minStock: product.minStock.toString(),
+            pricePerKg: product.pricePerKg != null ? product.pricePerKg.toString() : "",
             description: product.description || "",
             quantity: "0" // Quantity usually not editable directly here except for adjustment, forcing 0 safety
         });
@@ -103,7 +106,7 @@ export default function InventoryClient({ initialProducts }: { initialProducts: 
     const handleCloseModal = () => {
         setIsModalOpen(false);
         setEditingProduct(null);
-        setFormData({ category: "Barang Mentah", type: "Putusan", minStock: "10", description: "", quantity: "0" });
+        setFormData({ category: "Barang Mentah", type: "Putusan", minStock: "10", pricePerKg: "", description: "", quantity: "0" });
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -118,6 +121,7 @@ export default function InventoryClient({ initialProducts }: { initialProducts: 
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         minStock: parseFloat(formData.minStock),
+                        pricePerKg: formData.pricePerKg !== "" ? parseFloat(formData.pricePerKg) : null,
                         description: formData.description
                     })
                 });
@@ -150,6 +154,7 @@ export default function InventoryClient({ initialProducts }: { initialProducts: 
                         category: formData.category,
                         type: formData.type,
                         minStock: parseFloat(formData.minStock),
+                        pricePerKg: formData.pricePerKg !== "" ? parseFloat(formData.pricePerKg) : null,
                         description: formData.description,
                         quantity: parseFloat(formData.quantity)
                     })
@@ -431,6 +436,20 @@ export default function InventoryClient({ initialProducts }: { initialProducts: 
                                         className="input-modern w-full"
                                         value={formData.minStock}
                                         onChange={e => setFormData({ ...formData, minStock: e.target.value })}
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 block">
+                                        Harga Jual / Kg (Rp)
+                                        <span className="text-xs text-slate-400 font-normal ml-1">— dipakai untuk Invoice</span>
+                                    </label>
+                                    <input
+                                        type="number"
+                                        className="input-modern w-full font-mono"
+                                        value={formData.pricePerKg}
+                                        onChange={e => setFormData({ ...formData, pricePerKg: e.target.value })}
+                                        placeholder="Contoh: 4350"
                                     />
                                 </div>
 
