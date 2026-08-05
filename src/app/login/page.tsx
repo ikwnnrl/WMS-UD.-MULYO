@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { User, Lock, Loader2, ArrowRight, ArrowLeft, Users, ShieldCheck, Warehouse, KeyRound } from "lucide-react";
+import Image from "next/image";
+import { User, Lock, Loader2, ArrowRight, ArrowLeft, Users, ShieldCheck, KeyRound } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function LoginPage() {
@@ -43,8 +44,8 @@ export default function LoginPage() {
 
             <div className="w-full max-w-md relative z-10 glass-card shadow-2xl shadow-indigo-500/10 border-white/50 dark:border-slate-800">
                 <div className="text-center mb-8">
-                    <div className="inline-flex items-center justify-center p-4 bg-indigo-600 rounded-2xl shadow-lg shadow-indigo-500/30 mb-4">
-                        <Warehouse className="text-white" size={32} />
+                    <div className="inline-flex items-center justify-center p-4 bg-white rounded-2xl shadow-lg shadow-indigo-500/20 mb-4 w-20 h-20">
+                        <Image src="/logo-bml.png" alt="Logo CV. Bumi Mulia Lestari" width={80} height={80} className="w-full h-full object-contain" priority />
                     </div>
                     <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">
                         CV. Bumi Mulia Lestari

@@ -2,6 +2,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
@@ -67,8 +68,8 @@ export function Sidebar({ user }: { user?: { name: string, role: string } }) {
                 {/* Header */}
                 <div className="p-6 pb-2">
                     <div className="flex items-center gap-3 mb-6">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-yellow-600 flex items-center justify-center text-black font-bold text-lg shadow-lg shadow-amber-500/30">
-                            M
+                        <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center shadow-lg shadow-amber-500/20 p-1.5 overflow-hidden">
+                            <Image src="/logo-bml.png" alt="Logo CV. Bumi Mulia Lestari" width={40} height={40} className="w-full h-full object-contain" />
                         </div>
                         <div>
                             <h1 className="font-bold text-lg text-white tracking-tight">CV. Bumi Mulia Lestari</h1>
