@@ -1,99 +1,175 @@
 import React from "react";
 import { Document, Page, Text, View, StyleSheet, Image, Font } from "@react-pdf/renderer";
 
-// Custom half-A4 paper size matching the original Excel print setup:
+// Custom paper size matching the original Excel print setup:
 // Custom 9.5 x 5.5 inch (241.3 x 139.7 mm), Landscape.
+// This is HALF of a continuous-form sheet (perforated in the middle) —
+// the physical form is 2x this height, printed twice (top half / bottom half),
+// mirroring the Excel macros RunInvoiceHalf("atas") / RunInvoiceHalf("bawah").
 const PAGE_WIDTH = 241.3 * 2.8346; // mm to points (1mm = 2.8346pt)
 const PAGE_HEIGHT = 139.7 * 2.8346;
+
+const NAVY = "#17365D";
+const GRAY_LABEL = "#555555";
 
 const styles = StyleSheet.create({
   page: {
     width: PAGE_WIDTH,
     height: PAGE_HEIGHT,
-    padding: 18,
+    paddingTop: 4,
+    paddingBottom: 4,
+    paddingLeft: 10,
+    paddingRight: 8,
     fontSize: 8,
     fontFamily: "Helvetica",
   },
   headerRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 6,
+    alignItems: "flex-start",
   },
   companyBlock: {
     flexDirection: "row",
-    alignItems: "flex-start",
+    alignItems: "center",
     gap: 6,
   },
   logo: {
-    width: 32,
-    height: 32,
+    width: 34,
+    height: 34,
+  },
+  companyTextBlock: {
+    justifyContent: "center",
   },
   companyName: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: 700,
+    color: NAVY,
+    textAlign: "center",
   },
   companyDetail: {
-    fontSize: 7,
-    color: "#333",
+    fontSize: 8,
+    color: "#000",
+    textAlign: "center",
+  },
+  companyTagline: {
+    fontSize: 8,
+    fontWeight: 700,
+    color: GRAY_LABEL,
+    textAlign: "center",
   },
   rightBlock: {
     alignItems: "flex-end",
+    maxWidth: 150,
+  },
+  rightDate: {
+    fontSize: 8,
+    fontWeight: 700,
+    color: NAVY,
+  },
+  rightLabel: {
+    fontSize: 8,
+    fontWeight: 700,
+    color: NAVY,
+    marginTop: 2,
+  },
+  rightValue: {
+    fontSize: 9,
+    textAlign: "right",
   },
   title: {
     fontSize: 13,
     fontWeight: 700,
     textAlign: "center",
-    marginVertical: 4,
-    letterSpacing: 1,
+    color: NAVY,
+    marginTop: 2,
+    marginBottom: 2,
+    letterSpacing: 0.5,
   },
   infoRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 6,
+    marginBottom: 3,
   },
   infoLeft: {
-    width: "55%",
+    width: "62%",
   },
   infoRight: {
-    width: "40%",
+    width: "36%",
   },
   infoLine: {
     flexDirection: "row",
     marginBottom: 1,
   },
   infoLabel: {
-    width: 70,
+    width: 62,
+    fontSize: 9,
+    fontWeight: 700,
+    color: NAVY,
+  },
+  infoValue: {
+    fontSize: 9,
+    fontWeight: 700,
+    color: NAVY,
+    flex: 1,
+  },
+  intro: {
+    fontSize: 9,
+    fontStyle: "italic",
+    color: GRAY_LABEL,
+    marginBottom: 2,
   },
   table: {
-    borderTopWidth: 1,
-    borderTopColor: "#000",
-    marginTop: 4,
+    marginTop: 1,
   },
   tableHeaderRow: {
     flexDirection: "row",
-    borderBottomWidth: 1,
-    borderBottomColor: "#000",
+    backgroundColor: NAVY,
     paddingVertical: 2,
+  },
+  tableHeaderCell: {
+    fontSize: 9,
     fontWeight: 700,
+    color: "#FFFFFF",
+    textAlign: "center",
   },
   tableRow: {
     flexDirection: "row",
+    borderBottomWidth: 0.5,
+    borderBottomColor: "#999",
     paddingVertical: 2,
+    minHeight: 13,
   },
-  colUnit: { width: "15%" },
-  colNama: { width: "55%" },
-  colBerat: { width: "30%", textAlign: "right" },
+  colUnit: { width: "15%", textAlign: "center" },
+  colNama: { width: "55%", textAlign: "center" },
+  colBerat: { width: "30%", textAlign: "right", paddingRight: 4 },
+  tableCell: {
+    fontSize: 9,
+  },
   signatureRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginTop: 20,
+    marginTop: 14,
   },
   signatureBlock: {
     width: "40%",
+    alignItems: "center",
+  },
+  signatureLabel: {
+    fontSize: 9,
+    color: "#666",
     textAlign: "center",
   },
   signatureSpace: {
-    marginTop: 28,
+    marginTop: 26,
+    fontSize: 9,
+    textAlign: "center",
+  },
+  signatureCompany: {
+    marginTop: 26,
+    fontSize: 9,
+    fontWeight: 700,
+    color: NAVY,
+    textAlign: "center",
   },
 });
 
@@ -124,24 +200,30 @@ export function SuratJalanPdf({
   items,
   logoUrl,
 }: SuratJalanPdfProps) {
+  // Tabel Excel punya 6 baris item (B12:G17); isi baris kosong agar tinggi tabel konsisten.
+  const paddedItems: SuratJalanItem[] = [...items];
+  while (paddedItems.length < 6) {
+    paddedItems.push({ unit: "", namaBarang: "", beratKg: "" });
+  }
+
   return (
     <Document>
       <Page size={{ width: PAGE_WIDTH, height: PAGE_HEIGHT }} style={styles.page}>
         <View style={styles.headerRow}>
           <View style={styles.companyBlock}>
             {logoUrl && <Image src={logoUrl} style={styles.logo} />}
-            <View>
+            <View style={styles.companyTextBlock}>
               <Text style={styles.companyName}>CV. BUMI MULIA LESTARI</Text>
               <Text style={styles.companyDetail}>Jl. Lingkar Slawi - Kab. Tegal</Text>
               <Text style={styles.companyDetail}>Telp. 0853 2621 5550</Text>
-              <Text style={styles.companyDetail}>Penggilingan Onggok, Pati & Gaplek</Text>
+              <Text style={styles.companyTagline}>Penggilingan Onggok, Pati & Gaplek</Text>
             </View>
           </View>
           <View style={styles.rightBlock}>
-            <Text>Tegal, {tanggal}</Text>
-            <Text style={{ marginTop: 4 }}>Kepada Yth.</Text>
-            <Text style={{ fontWeight: 700 }}>{namaPelanggan}</Text>
-            <Text style={{ maxWidth: 140, textAlign: "right" }}>{alamatPelanggan}</Text>
+            <Text style={styles.rightDate}>Tegal, {tanggal}</Text>
+            <Text style={styles.rightLabel}>Kepada Yth.</Text>
+            <Text style={styles.rightValue}>{namaPelanggan}</Text>
+            <Text style={[styles.rightValue, { fontSize: 8 }]}>{alamatPelanggan}</Text>
           </View>
         </View>
 
@@ -151,46 +233,48 @@ export function SuratJalanPdf({
           <View style={styles.infoLeft}>
             <View style={styles.infoLine}>
               <Text style={styles.infoLabel}>No. Surat Jalan</Text>
-              <Text>: {noSuratJalan}</Text>
+              <Text style={styles.infoValue}>: {noSuratJalan}</Text>
             </View>
             <View style={styles.infoLine}>
               <Text style={styles.infoLabel}>No. PO</Text>
-              <Text>: {noPO}</Text>
+              <Text style={styles.infoValue}>: {noPO}</Text>
             </View>
           </View>
           <View style={styles.infoRight}>
             <View style={styles.infoLine}>
-              <Text style={styles.infoLabel}>No. Polisi</Text>
-              <Text>: {noPolisi}</Text>
+              <Text style={[styles.infoLabel, { width: 55, textAlign: "right" }]}>No. Polisi :</Text>
+              <Text style={styles.infoValue}> {noPolisi}</Text>
             </View>
           </View>
         </View>
 
-        <Text>Harap terima dengan baik barang-barang berikut ini:</Text>
+        <Text style={styles.intro}>Harap terima dengan baik barang-barang berikut ini:</Text>
 
         <View style={styles.table}>
           <View style={styles.tableHeaderRow}>
-            <Text style={styles.colUnit}>Unit</Text>
-            <Text style={styles.colNama}>Nama Barang</Text>
-            <Text style={styles.colBerat}>Berat</Text>
+            <Text style={[styles.tableHeaderCell, styles.colUnit]}>Unit</Text>
+            <Text style={[styles.tableHeaderCell, styles.colNama]}>Nama Barang</Text>
+            <Text style={[styles.tableHeaderCell, styles.colBerat]}>Berat</Text>
           </View>
-          {items.map((item, idx) => (
+          {paddedItems.map((item, idx) => (
             <View style={styles.tableRow} key={idx}>
-              <Text style={styles.colUnit}>{item.unit}</Text>
-              <Text style={styles.colNama}>{item.namaBarang}</Text>
-              <Text style={styles.colBerat}>{item.beratKg} Kg</Text>
+              <Text style={[styles.tableCell, styles.colUnit]}>{item.unit}</Text>
+              <Text style={[styles.tableCell, styles.colNama]}>{item.namaBarang}</Text>
+              <Text style={[styles.tableCell, styles.colBerat]}>
+                {item.beratKg !== "" ? `${item.beratKg} Kg` : ""}
+              </Text>
             </View>
           ))}
         </View>
 
         <View style={styles.signatureRow}>
           <View style={styles.signatureBlock}>
-            <Text>Yang Menerima,</Text>
+            <Text style={styles.signatureLabel}>Yang Menerima,</Text>
             <Text style={styles.signatureSpace}>................................</Text>
           </View>
           <View style={styles.signatureBlock}>
-            <Text>Hormat kami,</Text>
-            <Text style={styles.signatureSpace}>CV. BUMI MULIA LESTARI</Text>
+            <Text style={styles.signatureLabel}>Hormat kami,</Text>
+            <Text style={styles.signatureCompany}>CV. BUMI MULIA LESTARI</Text>
           </View>
         </View>
       </Page>

@@ -2,21 +2,28 @@ import React from "react";
 import { Document, Page, Text, View, StyleSheet, Image } from "@react-pdf/renderer";
 import { terbilangRupiah } from "@/lib/terbilang";
 
-const PAGE_WIDTH = 241.3 * 2.8346;
-const PAGE_HEIGHT = 139.7 * 2.8346;
+// Invoice sheet in Excel is portrait A4, but content (B2:G29) is designed to be
+// printed twice per A4 sheet (top half / bottom half) via the RunInvoiceHalf("atas"/"bawah")
+// macro — i.e. half-A4 per copy (~210 x 148.5mm), not the custom continuous-form
+// size used by Surat Jalan.
+const PAGE_WIDTH = 210 * 2.8346; // A4 width in points
+const PAGE_HEIGHT = 148.5 * 2.8346; // half A4 height in points
 
 const styles = StyleSheet.create({
   page: {
     width: PAGE_WIDTH,
     height: PAGE_HEIGHT,
-    padding: 18,
-    fontSize: 8,
+    paddingTop: 8,
+    paddingBottom: 8,
+    paddingLeft: 14,
+    paddingRight: 12,
+    fontSize: 9,
     fontFamily: "Helvetica",
   },
   headerRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 6,
+    alignItems: "flex-start",
   },
   companyBlock: {
     flexDirection: "row",
@@ -24,19 +31,18 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   logo: {
-    width: 28,
-    height: 28,
+    width: 30,
+    height: 30,
   },
   companyName: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: 700,
   },
   companyDetail: {
-    fontSize: 7,
-    color: "#333",
+    fontSize: 9,
   },
   invoiceTitle: {
-    fontSize: 16,
+    fontSize: 22,
     fontWeight: 700,
   },
   section: {
@@ -45,61 +51,90 @@ const styles = StyleSheet.create({
   infoRow: {
     flexDirection: "row",
     justifyContent: "space-between",
+    marginTop: 6,
     marginBottom: 4,
   },
-  infoLeft: { width: "50%" },
-  infoRight: { width: "45%" },
+  infoLeft: { width: "48%" },
+  infoRight: { width: "48%" },
+  pelangganLabel: { fontSize: 10, fontWeight: 700, marginBottom: 1 },
   infoLine: { flexDirection: "row", marginBottom: 1 },
-  infoLabel: { width: 75 },
+  infoLabel: { width: 78, fontSize: 9 },
+  infoValue: { fontSize: 9, fontWeight: 700, flex: 1 },
   table: {
-    borderTopWidth: 1,
-    borderTopColor: "#000",
-    marginTop: 4,
+    marginTop: 6,
   },
   tableHeaderRow: {
     flexDirection: "row",
-    borderBottomWidth: 1,
-    borderBottomColor: "#000",
-    paddingVertical: 2,
+    borderTopWidth: 0.75,
+    borderBottomWidth: 0.75,
+    borderColor: "#000",
+    paddingVertical: 3,
+  },
+  tableHeaderCell: {
+    fontSize: 9,
     fontWeight: 700,
+    textAlign: "center",
   },
   tableRow: {
     flexDirection: "row",
-    paddingVertical: 2,
+    paddingVertical: 4,
+    minHeight: 16,
   },
-  colNo: { width: "6%" },
-  colNama: { width: "34%" },
-  colKuantitas: { width: "20%", textAlign: "right" },
-  colHarga: { width: "20%", textAlign: "right" },
-  colJumlah: { width: "20%", textAlign: "right" },
+  colNo: { width: "8%", textAlign: "center" },
+  colNama: { width: "34%", textAlign: "center" },
+  colKuantitas: { width: "20%", textAlign: "center" },
+  colHarga: { width: "18%", textAlign: "center" },
+  colJumlah: { width: "20%", textAlign: "center" },
+  tableCell: { fontSize: 9 },
   totalsBlock: {
-    marginTop: 6,
-    alignItems: "flex-end",
+    marginTop: 2,
   },
   totalRow: {
     flexDirection: "row",
     justifyContent: "flex-end",
-    width: "50%",
     marginBottom: 1,
+    borderTopWidth: 0,
   },
-  totalLabel: { width: "50%", textAlign: "right", paddingRight: 8 },
-  totalValue: { width: "50%", textAlign: "right" },
-  grandTotalRow: {
-    borderTopWidth: 1,
-    borderTopColor: "#000",
-    marginTop: 2,
+  totalRowFirst: {
+    borderTopWidth: 0.75,
+    borderColor: "#000",
     paddingTop: 2,
   },
+  totalLabel: { width: "28%", textAlign: "left", fontSize: 9 },
+  totalValue: { width: "20%", textAlign: "center", fontSize: 9 },
+  grandTotalRow: {
+    borderBottomWidth: 0.75,
+    borderColor: "#000",
+    paddingBottom: 2,
+  },
   terbilang: {
-    marginTop: 4,
+    marginTop: 5,
+    fontSize: 8,
     fontStyle: "italic",
   },
   footer: {
-    marginTop: 10,
+    marginTop: 8,
+  },
+  footerTitle: {
+    fontSize: 8,
+    fontWeight: 700,
+  },
+  footerText: {
+    fontSize: 8,
   },
   signatureBlock: {
-    marginTop: 12,
+    marginTop: 10,
     alignItems: "flex-end",
+  },
+  signatureLabel: {
+    fontSize: 11,
+    textAlign: "center",
+  },
+  signatureCompany: {
+    marginTop: 26,
+    fontSize: 11,
+    fontWeight: 700,
+    textAlign: "center",
   },
 });
 
@@ -154,48 +189,48 @@ export function InvoicePdf({
 
         <View style={styles.infoRow}>
           <View style={styles.infoLeft}>
-            <Text style={{ fontWeight: 700 }}>PELANGGAN</Text>
-            <Text>{namaPelanggan}</Text>
-            <Text>{alamatPelanggan}</Text>
-            {npwpPelanggan && <Text>NPWP : {npwpPelanggan}</Text>}
+            <Text style={styles.pelangganLabel}>PELANGGAN</Text>
+            <Text style={styles.infoValue}>{namaPelanggan}</Text>
+            <Text style={{ fontSize: 9 }}>{alamatPelanggan}</Text>
+            <Text style={{ fontSize: 9 }}>NPWP : {npwpPelanggan || "0810 9774 0550 1000"}</Text>
           </View>
           <View style={styles.infoRight}>
             <View style={styles.infoLine}>
               <Text style={styles.infoLabel}>No. Invoice</Text>
-              <Text>: {invoiceNumber}</Text>
+              <Text style={styles.infoValue}>: {invoiceNumber}</Text>
             </View>
             <View style={styles.infoLine}>
               <Text style={styles.infoLabel}>No. Surat Jalan</Text>
-              <Text>: {suratJalanNumber}</Text>
+              <Text style={styles.infoValue}>: {suratJalanNumber}</Text>
             </View>
             <View style={styles.infoLine}>
               <Text style={styles.infoLabel}>Tanggal</Text>
-              <Text>: {tanggal}</Text>
+              <Text style={styles.infoValue}>: {tanggal}</Text>
             </View>
           </View>
         </View>
 
-        <Text style={styles.section}>Rincian tagihan:</Text>
+        <Text style={[styles.section, { fontSize: 8 }]}>Rincian tagihan:</Text>
 
         <View style={styles.table}>
           <View style={styles.tableHeaderRow}>
-            <Text style={styles.colNo}>No</Text>
-            <Text style={styles.colNama}>Nama Barang</Text>
-            <Text style={styles.colKuantitas}>Kuantitas (Kg)</Text>
-            <Text style={styles.colHarga}>Harga/Kg (Rp)</Text>
-            <Text style={styles.colJumlah}>Jumlah (Rp)</Text>
+            <Text style={[styles.tableHeaderCell, styles.colNo]}>No</Text>
+            <Text style={[styles.tableHeaderCell, styles.colNama]}>Nama Barang</Text>
+            <Text style={[styles.tableHeaderCell, styles.colKuantitas]}>Kuantitas (Kg)</Text>
+            <Text style={[styles.tableHeaderCell, styles.colHarga]}>Harga/Kg (Rp)</Text>
+            <Text style={[styles.tableHeaderCell, styles.colJumlah]}>Jumlah (Rp)</Text>
           </View>
           <View style={styles.tableRow}>
-            <Text style={styles.colNo}>1</Text>
-            <Text style={styles.colNama}>{itemName}</Text>
-            <Text style={styles.colKuantitas}>{quantity.toLocaleString("id-ID")}</Text>
-            <Text style={styles.colHarga}>{pricePerKg.toLocaleString("id-ID")}</Text>
-            <Text style={styles.colJumlah}>{subtotal.toLocaleString("id-ID")}</Text>
+            <Text style={[styles.tableCell, styles.colNo]}>1</Text>
+            <Text style={[styles.tableCell, styles.colNama]}>{itemName}</Text>
+            <Text style={[styles.tableCell, styles.colKuantitas]}>{quantity.toLocaleString("id-ID")}</Text>
+            <Text style={[styles.tableCell, styles.colHarga]}>{pricePerKg.toLocaleString("id-ID")}</Text>
+            <Text style={[styles.tableCell, styles.colJumlah]}>{subtotal.toLocaleString("id-ID")}</Text>
           </View>
         </View>
 
         <View style={styles.totalsBlock}>
-          <View style={styles.totalRow}>
+          <View style={[styles.totalRow, styles.totalRowFirst]}>
             <Text style={styles.totalLabel}>Subtotal</Text>
             <Text style={styles.totalValue}>{formatRupiah(subtotal)}</Text>
           </View>
@@ -204,22 +239,22 @@ export function InvoicePdf({
             <Text style={styles.totalValue}>{formatRupiah(ppn)}</Text>
           </View>
           <View style={[styles.totalRow, styles.grandTotalRow]}>
-            <Text style={[styles.totalLabel, { fontWeight: 700 }]}>TOTAL AKHIR</Text>
-            <Text style={[styles.totalValue, { fontWeight: 700 }]}>{formatRupiah(total)}</Text>
+            <Text style={styles.totalLabel}>TOTAL AKHIR</Text>
+            <Text style={styles.totalValue}>{formatRupiah(total)}</Text>
           </View>
         </View>
 
         <Text style={styles.terbilang}>Terbilang: {terbilangRupiah(total)}</Text>
 
         <View style={styles.footer}>
-          <Text style={{ fontWeight: 700 }}>KETERANGAN PEMBAYARAN</Text>
-          <Text>Pembayaran harus ditujukan kepada CV. BUMI MULIA LESTARI.</Text>
-          <Text>BANK BRI | No. Rekening: 066101001608564 | A/N: CV. BUMI MULIA LESTARI</Text>
+          <Text style={styles.footerTitle}>KETERANGAN PEMBAYARAN</Text>
+          <Text style={styles.footerText}>Pembayaran harus ditujukan kepada CV. BUMI MULIA LESTARI.</Text>
+          <Text style={styles.footerText}>BANK BRI | No. Rekening: 066101001608564 | A/N: CV. BUMI MULIA LESTARI</Text>
         </View>
 
         <View style={styles.signatureBlock}>
-          <Text>Hormat kami,</Text>
-          <Text style={{ marginTop: 20 }}>CV. BUMI MULIA LESTARI</Text>
+          <Text style={styles.signatureLabel}>Hormat kami,</Text>
+          <Text style={styles.signatureCompany}>CV. BUMI MULIA LESTARI</Text>
         </View>
       </Page>
     </Document>
