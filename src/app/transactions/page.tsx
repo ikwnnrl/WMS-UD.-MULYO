@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ArrowDownLeft, ArrowUpRight, Search, Pencil, Trash2, X, FileText, Loader2, Filter, Calendar, Printer, Receipt } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, Search, Pencil, Trash2, X, FileText, Loader2, Filter, Calendar, Printer, Receipt, Scale } from "lucide-react";
 import { cn } from "@/lib/utils";
 import ExportButton from "@/components/common/ExportButton";
 
@@ -90,12 +90,31 @@ export default function TransactionsPage() {
 
     const [creatingInvoiceId, setCreatingInvoiceId] = useState<number | null>(null);
 
-    const handleCreateInvoice = async (id: number) => {
+    // Modal berat manual untuk Invoice (bisa beda dari Surat Jalan karena susut timbang)
+    const [invoiceModalTx, setInvoiceModalTx] = useState<Transaction | null>(null);
+    const [invoiceWeight, setInvoiceWeight] = useState("");
+
+    const openInvoiceModal = (tx: Transaction) => {
+        setInvoiceWeight(String(tx.quantity));
+        setInvoiceModalTx(tx);
+    };
+
+    const handleCreateInvoice = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!invoiceModalTx) return;
+        const id = invoiceModalTx.id;
         setCreatingInvoiceId(id);
         try {
-            const res = await fetch(`/api/transactions/${id}/invoice`, { method: 'POST' });
+            const res = await fetch(`/api/transactions/${id}/invoice`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    actualWeight: invoiceWeight ? parseFloat(invoiceWeight) : undefined,
+                }),
+            });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || "Gagal membuat invoice");
+            setInvoiceModalTx(null);
             window.open(`/api/invoices/${data.id}/pdf`, "_blank");
         } catch (err: any) {
             alert(err.message || "Gagal membuat invoice.");
@@ -310,7 +329,7 @@ export default function TransactionsPage() {
                                                         <Printer size={16} />
                                                     </button>
                                                     <button
-                                                        onClick={() => handleCreateInvoice(tx.id)}
+                                                        onClick={() => openInvoiceModal(tx)}
                                                         disabled={creatingInvoiceId === tx.id}
                                                         className="p-2 bg-slate-100 hover:bg-white border border-slate-200 hover:border-emerald-300 text-slate-400 hover:text-emerald-600 dark:bg-slate-800 dark:hover:bg-slate-700 dark:border-slate-700 rounded-lg transition-all shadow-sm disabled:opacity-50"
                                                         title="Buat & Cetak Invoice"
@@ -447,6 +466,52 @@ export default function TransactionsPage() {
                                     className="btn-primary flex-1"
                                 >
                                     {isSaving ? <Loader2 className="animate-spin" size={18} /> : "Update Transaksi"}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal berat manual untuk Invoice (bisa beda dari Surat Jalan karena susut timbang) */}
+            {invoiceModalTx && (
+                <div
+                    className="fixed inset-0 bg-slate-900/50 flex items-center justify-center p-4 z-50 backdrop-blur-md"
+                    onClick={() => setInvoiceModalTx(null)}
+                >
+                    <div
+                        className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-sm p-6 space-y-4 shadow-2xl border border-white/20 dark:border-slate-800"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-4">
+                            <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                                <Scale size={20} className="text-emerald-600" /> Berat Invoice
+                            </h2>
+                            <button onClick={() => setInvoiceModalTx(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                                <X size={22} />
+                            </button>
+                        </div>
+                        <p className="text-sm text-slate-500 dark:text-slate-400">
+                            Berat di Surat Jalan: <span className="font-bold">{invoiceModalTx.quantity.toLocaleString()} Kg</span>. Sesuaikan dengan hasil timbang jika ada susut.
+                        </p>
+                        <form onSubmit={handleCreateInvoice} className="space-y-4 pt-2">
+                            <div>
+                                <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 block">Berat Aktual (Kg)</label>
+                                <input
+                                    type="number"
+                                    step="0.01"
+                                    required
+                                    className="input-modern w-full text-2xl font-bold text-center text-emerald-600"
+                                    value={invoiceWeight}
+                                    onChange={e => setInvoiceWeight(e.target.value)}
+                                />
+                            </div>
+                            <div className="flex gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
+                                <button type="button" onClick={() => setInvoiceModalTx(null)} className="btn-secondary flex-1">
+                                    Batal
+                                </button>
+                                <button type="submit" disabled={creatingInvoiceId === invoiceModalTx.id} className="btn-primary flex-1">
+                                    {creatingInvoiceId === invoiceModalTx.id ? <Loader2 className="animate-spin" size={18} /> : "Buat Invoice"}
                                 </button>
                             </div>
                         </form>

@@ -1,10 +1,10 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Save, Loader2, ArrowUpRight, Truck, User, FileText, Calendar, Box, Printer, Receipt, CheckCircle2, X } from "lucide-react";
+import { ArrowLeft, Loader2, ArrowUpRight, Truck, User, FileText, Calendar, Box, Printer, Receipt, CheckCircle2, X, Scale } from "lucide-react";
 import Link from "next/link";
-import { cn } from "@/lib/utils";
 
 interface Product {
     id: number;
@@ -13,17 +13,10 @@ interface Product {
     quantity: number;
 }
 
-interface Customer {
-    id: number;
-    name: string;
-    address?: string;
-}
-
 export default function OutboundPage() {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
     const [products, setProducts] = useState<Product[]>([]);
-    const [customers, setCustomers] = useState<Customer[]>([]);
 
     // State untuk opsi Bantuan
     const [isAssistance, setIsAssistance] = useState(false);
@@ -32,26 +25,31 @@ export default function OutboundPage() {
     const [savedResult, setSavedResult] = useState<{
         id: number;
         suratJalanNumber: string | null;
+        quantity: number;
     } | null>(null);
-    const [creatingInvoice, setCreatingInvoice] = useState(false);
 
-    // Quick-add pelanggan baru (mirror menambah baris di MASTER!A:B)
-    const [showAddCustomer, setShowAddCustomer] = useState(false);
-    const [savingCustomer, setSavingCustomer] = useState(false);
-    const [newCustomer, setNewCustomer] = useState({ name: "", address: "", npwp: "" });
+    // Modal input berat manual untuk Invoice (bisa beda dari Surat Jalan karena susut timbang)
+    const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+    const [invoiceWeight, setInvoiceWeight] = useState("");
+    const [creatingInvoice, setCreatingInvoice] = useState(false);
 
     // Form State
     const [formData, setFormData] = useState({
         productId: "",
         date: new Date().toISOString().split('T')[0],
 
-        // Static Fields
+        // Static Fields — pelanggan tetap, tidak bisa diubah
         source: "CV. Bumi Mulia Lestari",
-        customerId: "",
+        destination: "PT. Menara Laut Bersatu",
 
         // Outbound Specific
-        destinationWarehouse: "M1", // Kode pendek (mirror MASTER!L2:L4), ditampilkan sebagai "MLB 1"
-        poNumber: "",
+        destinationWarehouse: "M1", // Kode gudang mirror MASTER!L2:L4 (M1/M2/M3)
+
+        // No PO manual 2 bagian, mirror Surat Jalan!M12 (3 digit) & M13 (2 digit)
+        // Dirangkai otomatis jadi: PO/{poDigit3}/MLB/{poDigit2}/{BulanRomawi}/{tahun2digit}
+        poDigit3: "",
+        poDigit2: "",
+
         unitCount: "",
 
         quantity: "",
@@ -63,7 +61,6 @@ export default function OutboundPage() {
     });
 
     const selectedProduct = products.find(p => p.id === parseInt(formData.productId));
-    const selectedCustomer = customers.find(c => c.id === parseInt(formData.customerId));
     const currentStock = selectedProduct?.quantity || 0;
 
     // Fetch Data
@@ -73,15 +70,17 @@ export default function OutboundPage() {
             const filtered = data.filter((p: any) => p.category === 'Barang Jadi');
             setProducts(filtered);
         });
-        fetch('/api/customers').then(res => res.json()).then((data) => {
-            setCustomers(Array.isArray(data) ? data : []);
-            // Default ke pelanggan pertama jika ada, mirip default MASTER!A2
-            setFormData(prev => ({
-                ...prev,
-                customerId: prev.customerId || (Array.isArray(data) && data[0] ? String(data[0].id) : ""),
-            }));
-        });
     }, []);
+
+    // Format No PO: PO/{3digit}/MLB/{2digit}/{BulanRomawi}/{tahun2digit} — mirror Surat Jalan!D8
+    const ROMAN_MONTHS = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII"];
+    const formatPoPreview = () => {
+        if (!formData.poDigit3 || !formData.poDigit2) return null;
+        const d = new Date(formData.date);
+        const month = ROMAN_MONTHS[d.getMonth()];
+        const yy = String(d.getFullYear()).slice(-2);
+        return `PO/${formData.poDigit3.padStart(3, "0")}/MLB/${formData.poDigit2.padStart(2, "0")}/${month}/${yy}`;
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -95,6 +94,8 @@ export default function OutboundPage() {
             return;
         }
 
+        const poNumber = formatPoPreview();
+
         try {
             const res = await fetch('/api/transactions', {
                 method: 'POST',
@@ -102,13 +103,12 @@ export default function OutboundPage() {
                 body: JSON.stringify({
                     type: 'OUT',
                     productId: formData.productId,
-                    customerId: formData.customerId || null,
                     quantity: qty,
                     date: formData.date,
 
                     // Outbound Specific
                     destinationWarehouse: formData.destinationWarehouse,
-                    poNumber: formData.poNumber,
+                    poNumber: poNumber,
                     unitCount: formData.unitCount ? parseInt(formData.unitCount) : null,
                     // suratJalanNumber sengaja tidak dikirim: dibuat otomatis di server
                     // (mirror Surat Jalan!D7: nomor urut + kode barang + gudang tujuan)
@@ -116,14 +116,14 @@ export default function OutboundPage() {
                     driverName: formData.driverName,
                     licensePlate: formData.licensePlate,
 
-                    notes: `Outbound ke ${selectedCustomer?.name || "-"} (${formData.destinationWarehouse}) - ${isAssistance ? 'Bantuan ' : ''}${formData.notes}`
+                    notes: `Outbound ke ${formData.destination} (${formData.destinationWarehouse}) - ${isAssistance ? 'Bantuan ' : ''}${formData.notes}`
                 })
             });
 
             if (!res.ok) throw new Error('Failed to save');
 
             const data = await res.json();
-            setSavedResult({ id: data.id, suratJalanNumber: data.suratJalanNumber || null });
+            setSavedResult({ id: data.id, suratJalanNumber: data.suratJalanNumber || null, quantity: data.quantity });
         } catch (err) {
             alert('Terjadi kesalahan saat menyimpan data.');
         } finally {
@@ -136,13 +136,28 @@ export default function OutboundPage() {
         window.open(`/api/transactions/${savedResult.id}/surat-jalan`, "_blank");
     };
 
-    const handleCreateInvoice = async () => {
+    const openInvoiceModal = () => {
+        if (!savedResult) return;
+        // Pre-fill dengan berat Surat Jalan; user bisa koreksi karena susut timbang
+        setInvoiceWeight(String(savedResult.quantity));
+        setShowInvoiceModal(true);
+    };
+
+    const handleCreateInvoice = async (e: React.FormEvent) => {
+        e.preventDefault();
         if (!savedResult) return;
         setCreatingInvoice(true);
         try {
-            const res = await fetch(`/api/transactions/${savedResult.id}/invoice`, { method: 'POST' });
+            const res = await fetch(`/api/transactions/${savedResult.id}/invoice`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    actualWeight: invoiceWeight ? parseFloat(invoiceWeight) : undefined,
+                }),
+            });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || "Gagal membuat invoice");
+            setShowInvoiceModal(false);
             window.open(`/api/invoices/${data.id}/pdf`, "_blank");
         } catch (err: any) {
             alert(err.message || "Gagal membuat invoice.");
@@ -156,7 +171,8 @@ export default function OutboundPage() {
         setFormData(prev => ({
             ...prev,
             productId: "",
-            poNumber: "",
+            poDigit3: "",
+            poDigit2: "",
             quantity: "",
             unitCount: "",
             driverName: "",
@@ -168,30 +184,6 @@ export default function OutboundPage() {
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
-    };
-
-    const handleSaveCustomer = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!newCustomer.name.trim()) return;
-        setSavingCustomer(true);
-        try {
-            const res = await fetch('/api/customers', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(newCustomer),
-            });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error || "Gagal menyimpan pelanggan");
-
-            setCustomers(prev => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)));
-            setFormData(prev => ({ ...prev, customerId: String(data.id) }));
-            setShowAddCustomer(false);
-            setNewCustomer({ name: "", address: "", npwp: "" });
-        } catch (err: any) {
-            alert(err.message || "Gagal menyimpan pelanggan.");
-        } finally {
-            setSavingCustomer(false);
-        }
     };
 
     return (
@@ -207,7 +199,7 @@ export default function OutboundPage() {
                         </div>
                         Barang Keluar (Outbound)
                     </h1>
-                    <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Catat pengiriman barang ke gudang tujuan (MLB).</p>
+                    <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Catat pengiriman barang ke gudang tujuan.</p>
                 </div>
             </div>
 
@@ -251,11 +243,11 @@ export default function OutboundPage() {
                                     value={formData.destinationWarehouse}
                                     onChange={handleChange}
                                     required
-                                    className="input-modern w-full"
+                                    className="input-modern w-full font-mono"
                                 >
-                                    <option value="M1">MLB 1</option>
-                                    <option value="M2">MLB 2</option>
-                                    <option value="M3">MLB 3</option>
+                                    <option value="M1">M1</option>
+                                    <option value="M2">M2</option>
+                                    <option value="M3">M3</option>
                                 </select>
                             </div>
                         </div>
@@ -268,44 +260,47 @@ export default function OutboundPage() {
                                     {formData.source}
                                 </div>
                             </div>
-                            <div className="space-y-1">
-                                <div className="flex items-center justify-between">
-                                    <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 block">Ke (Pelanggan)</label>
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowAddCustomer(true)}
-                                        className="text-[11px] font-bold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400"
-                                    >
-                                        + Pelanggan Baru
-                                    </button>
+                            <div>
+                                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 block">Ke (Pelanggan Tetap)</label>
+                                <div className="font-medium text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                                    <div className="w-2 h-2 rounded-full bg-orange-500"></div>
+                                    {formData.destination}
                                 </div>
-                                <select
-                                    name="customerId"
-                                    value={formData.customerId}
-                                    onChange={handleChange}
-                                    required
-                                    className="input-modern w-full font-medium"
-                                >
-                                    <option value="">-- Pilih Pelanggan --</option>
-                                    {customers.map(c => (
-                                        <option key={c.id} value={c.id}>{c.name}</option>
-                                    ))}
-                                </select>
                             </div>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-2">
-                                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">No PO</label>
-                                <input
-                                    type="text"
-                                    name="poNumber"
-                                    value={formData.poNumber}
-                                    onChange={handleChange}
-                                    placeholder="Contoh: PO-XXX-2024"
-                                    required
-                                    className="input-modern w-full font-mono"
-                                />
+                                <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                                    No PO
+                                    <span className="text-xs text-slate-400 font-normal ml-1">— mirror input Excel M12/M13</span>
+                                </label>
+                                <div className="flex gap-2">
+                                    <input
+                                        type="text"
+                                        name="poDigit3"
+                                        value={formData.poDigit3}
+                                        onChange={handleChange}
+                                        placeholder="002"
+                                        maxLength={3}
+                                        required
+                                        className="input-modern w-full font-mono text-center"
+                                    />
+                                    <span className="flex items-center text-slate-400">/</span>
+                                    <input
+                                        type="text"
+                                        name="poDigit2"
+                                        value={formData.poDigit2}
+                                        onChange={handleChange}
+                                        placeholder="25"
+                                        maxLength={2}
+                                        required
+                                        className="input-modern w-full font-mono text-center"
+                                    />
+                                </div>
+                                {formatPoPreview() && (
+                                    <p className="text-xs text-slate-500 font-mono">{formatPoPreview()}</p>
+                                )}
                             </div>
                             <div className="space-y-2">
                                 <label className="text-sm font-medium text-slate-700 dark:text-slate-300">No Surat Jalan</label>
@@ -428,7 +423,10 @@ export default function OutboundPage() {
                         </div>
 
                         <div className="space-y-2">
-                            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Berat Barang (Kg)</label>
+                            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                                Berat Barang (Kg)
+                                <span className="text-xs text-slate-400 font-normal ml-1">— untuk Surat Jalan</span>
+                            </label>
                             <div className="relative">
                                 <input
                                     type="number"
@@ -508,11 +506,10 @@ export default function OutboundPage() {
                         </button>
                         <button
                             type="button"
-                            onClick={handleCreateInvoice}
-                            disabled={creatingInvoice}
-                            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-medium hover:border-emerald-300 hover:text-emerald-600 transition-colors shadow-sm disabled:opacity-50"
+                            onClick={openInvoiceModal}
+                            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-medium hover:border-emerald-300 hover:text-emerald-600 transition-colors shadow-sm"
                         >
-                            {creatingInvoice ? <Loader2 size={16} className="animate-spin" /> : <Receipt size={16} />} Buat & Cetak Invoice
+                            <Receipt size={16} /> Buat & Cetak Invoice
                         </button>
                         <button
                             type="button"
@@ -525,59 +522,45 @@ export default function OutboundPage() {
                 </div>
             )}
 
-            {/* Modal quick-add pelanggan baru (mirror menambah baris MASTER!A:B) */}
-            {showAddCustomer && (
+            {/* Modal input berat manual untuk Invoice (bisa beda dari Surat Jalan karena susut timbang) */}
+            {showInvoiceModal && (
                 <div
                     className="fixed inset-0 bg-slate-900/50 flex items-center justify-center p-4 z-50 backdrop-blur-md"
-                    onClick={() => setShowAddCustomer(false)}
+                    onClick={() => setShowInvoiceModal(false)}
                 >
                     <div
-                        className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl border border-white/20 dark:border-slate-800"
+                        className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-sm p-6 space-y-4 shadow-2xl border border-white/20 dark:border-slate-800"
                         onClick={(e) => e.stopPropagation()}
                     >
                         <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-4">
-                            <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100">Pelanggan Baru</h2>
-                            <button onClick={() => setShowAddCustomer(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                            <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                                <Scale size={20} className="text-emerald-600" /> Berat Invoice
+                            </h2>
+                            <button onClick={() => setShowInvoiceModal(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
                                 <X size={22} />
                             </button>
                         </div>
-                        <form onSubmit={handleSaveCustomer} className="space-y-4 pt-2">
+                        <p className="text-sm text-slate-500 dark:text-slate-400">
+                            Berat di Surat Jalan: <span className="font-bold">{savedResult?.quantity.toLocaleString()} Kg</span>. Sesuaikan dengan hasil timbang jika ada susut.
+                        </p>
+                        <form onSubmit={handleCreateInvoice} className="space-y-4 pt-2">
                             <div>
-                                <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 block">Nama Pelanggan</label>
+                                <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 block">Berat Aktual (Kg)</label>
                                 <input
-                                    type="text"
+                                    type="number"
+                                    step="0.01"
                                     required
-                                    className="input-modern w-full"
-                                    value={newCustomer.name}
-                                    onChange={e => setNewCustomer({ ...newCustomer, name: e.target.value })}
-                                    placeholder="Contoh: PT. Menara Laut Bersatu"
-                                />
-                            </div>
-                            <div>
-                                <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 block">Alamat</label>
-                                <textarea
-                                    className="input-modern w-full h-20 resize-none"
-                                    value={newCustomer.address}
-                                    onChange={e => setNewCustomer({ ...newCustomer, address: e.target.value })}
-                                    placeholder="Alamat lengkap pelanggan..."
-                                />
-                            </div>
-                            <div>
-                                <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 block">NPWP (Opsional)</label>
-                                <input
-                                    type="text"
-                                    className="input-modern w-full font-mono"
-                                    value={newCustomer.npwp}
-                                    onChange={e => setNewCustomer({ ...newCustomer, npwp: e.target.value })}
-                                    placeholder="Contoh: 0810 9774 0550 1000"
+                                    className="input-modern w-full text-2xl font-bold text-center text-emerald-600"
+                                    value={invoiceWeight}
+                                    onChange={e => setInvoiceWeight(e.target.value)}
                                 />
                             </div>
                             <div className="flex gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
-                                <button type="button" onClick={() => setShowAddCustomer(false)} className="btn-secondary flex-1">
+                                <button type="button" onClick={() => setShowInvoiceModal(false)} className="btn-secondary flex-1">
                                     Batal
                                 </button>
-                                <button type="submit" disabled={savingCustomer} className="btn-primary flex-1">
-                                    {savingCustomer ? <Loader2 className="animate-spin" size={18} /> : "Simpan"}
+                                <button type="submit" disabled={creatingInvoice} className="btn-primary flex-1">
+                                    {creatingInvoice ? <Loader2 className="animate-spin" size={18} /> : "Buat Invoice"}
                                 </button>
                             </div>
                         </form>

@@ -63,13 +63,31 @@ export async function POST(request: Request) {
                 );
             }
 
+            // Pelanggan tetap: satu-satunya pelanggan Outbound adalah "PT. Menara Laut
+            // Bersatu" (tidak bisa dipilih/diubah dari UI). Cari atau buat record-nya
+            // sekali di sini supaya setiap transaksi OUT selalu terhubung dengan benar.
+            let customerId = body.customerId ? parseInt(body.customerId) : null;
+            if (body.type === "OUT" && !customerId) {
+                const FIXED_CUSTOMER_NAME = "PT. Menara Laut Bersatu";
+                let fixedCustomer = await tx.customer.findFirst({ where: { name: FIXED_CUSTOMER_NAME } });
+                if (!fixedCustomer) {
+                    fixedCustomer = await tx.customer.create({
+                        data: {
+                            name: FIXED_CUSTOMER_NAME,
+                            address: "JL. Seram, 1, Mintaragen, Tegal Timur, Kota Tegal, Jawa Tengah 52121",
+                        },
+                    });
+                }
+                customerId = fixedCustomer.id;
+            }
+
             // 2. Create Transaction Record with Snapshots
             const transaction = await tx.transaction.create({
                 data: {
                     type: body.type,
                     productId: productId,
                     supplierId: body.supplierId ? parseInt(body.supplierId) : null,
-                    customerId: body.customerId ? parseInt(body.customerId) : null,
+                    customerId,
                     quantity: parseFloat(body.quantity),
                     unitCount: body.unitCount ? parseInt(body.unitCount) : null,
                     manifestWeight: parseFloat(body.manifestWeight || 0),

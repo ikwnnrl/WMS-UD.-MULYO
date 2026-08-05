@@ -16,6 +16,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   try {
     const { id } = await params;
     const transactionId = parseInt(id);
+    const body = await request.json().catch(() => ({}));
 
     const transaction = await prisma.transaction.findUnique({
       where: { id: transactionId },
@@ -33,8 +34,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       return NextResponse.json(existing);
     }
 
+    // Berat untuk Invoice bisa berbeda dari berat di Surat Jalan (transaction.quantity)
+    // karena hasil timbang ulang biasanya mengalami susut. Jika tidak diisi manual,
+    // fallback ke berat transaksi seperti sebelumnya.
+    const invoiceWeight = body.actualWeight !== undefined && body.actualWeight !== null && !isNaN(parseFloat(body.actualWeight))
+      ? parseFloat(body.actualWeight)
+      : transaction.quantity;
+
     const pricePerKg = transaction.pricePerKg ?? transaction.product.pricePerKg ?? 0;
-    const subtotal = transaction.quantity * pricePerKg;
+    const subtotal = invoiceWeight * pricePerKg;
     const ppn = Math.round(subtotal * 0.11);
     const total = subtotal + ppn;
 
@@ -48,7 +56,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         customerId: transaction.customerId,
         date: transaction.date,
         itemName: transaction.product.name,
-        quantity: transaction.quantity,
+        quantity: invoiceWeight,
         pricePerKg,
         subtotal,
         ppn,
