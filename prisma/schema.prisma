@@ -107,6 +107,7 @@ model Transaction {
 
   // Data Kuantitas & Harga
   quantity        Float    // Jumlah barang yang mempengaruhi stok (biasanya ikut Actual Weight)
+  unitCount       Int?     // Jumlah unit/karung (kolom "Unit" di Surat Jalan Excel, terpisah dari berat)
   pricePerKg      Float?   // Harga satuan
   totalPrice      Float?   // Harga Total
   

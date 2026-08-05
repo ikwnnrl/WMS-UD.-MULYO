@@ -71,6 +71,7 @@ export async function POST(request: Request) {
                     supplierId: body.supplierId ? parseInt(body.supplierId) : null,
                     customerId: body.customerId ? parseInt(body.customerId) : null,
                     quantity: parseFloat(body.quantity),
+                    unitCount: body.unitCount ? parseInt(body.unitCount) : null,
                     manifestWeight: parseFloat(body.manifestWeight || 0),
                     actualWeight: parseFloat(body.actualWeight || 0),
                     weightDiff: parseFloat(body.weightDiff || 0),

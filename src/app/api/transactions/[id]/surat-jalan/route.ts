@@ -37,7 +37,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
         alamatPelanggan: transaction.customer?.address || "-",
         items: [
           {
-            unit: Math.round(transaction.quantity),
+            unit: transaction.unitCount ?? Math.round(transaction.quantity),
             namaBarang: transaction.product.name,
             beratKg: transaction.quantity.toLocaleString("id-ID"),
           },

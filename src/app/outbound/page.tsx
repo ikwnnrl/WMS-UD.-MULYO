@@ -50,8 +50,9 @@ export default function OutboundPage() {
         customerId: "",
 
         // Outbound Specific
-        destinationWarehouse: "MLB 1", // Default to MLB 1
+        destinationWarehouse: "M1", // Kode pendek (mirror MASTER!L2:L4), ditampilkan sebagai "MLB 1"
         poNumber: "",
+        unitCount: "",
 
         quantity: "",
 
@@ -105,10 +106,10 @@ export default function OutboundPage() {
                     quantity: qty,
                     date: formData.date,
 
-                    // Fields
-                    sourceWarehouse: null, // Outbound doesn't use source warehouse in the same way (it's from main)
+                    // Outbound Specific
                     destinationWarehouse: formData.destinationWarehouse,
                     poNumber: formData.poNumber,
+                    unitCount: formData.unitCount ? parseInt(formData.unitCount) : null,
                     // suratJalanNumber sengaja tidak dikirim: dibuat otomatis di server
                     // (mirror Surat Jalan!D7: nomor urut + kode barang + gudang tujuan)
 
@@ -157,6 +158,7 @@ export default function OutboundPage() {
             productId: "",
             poNumber: "",
             quantity: "",
+            unitCount: "",
             driverName: "",
             notes: "",
         }));
@@ -251,9 +253,9 @@ export default function OutboundPage() {
                                     required
                                     className="input-modern w-full"
                                 >
-                                    <option value="MLB 1">MLB 1</option>
-                                    <option value="MLB 2">MLB 2</option>
-                                    <option value="MLB 3">MLB 3</option>
+                                    <option value="M1">MLB 1</option>
+                                    <option value="M2">MLB 2</option>
+                                    <option value="M3">MLB 3</option>
                                 </select>
                             </div>
                         </div>
@@ -444,6 +446,21 @@ export default function OutboundPage() {
                                     <span>{currentStock.toLocaleString()} Kg</span>
                                 </div>
                             )}
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                                Jumlah Unit / Karung
+                                <span className="text-xs text-slate-400 font-normal ml-1">(kolom "Unit" di Surat Jalan)</span>
+                            </label>
+                            <input
+                                type="number"
+                                name="unitCount"
+                                value={formData.unitCount}
+                                onChange={handleChange}
+                                placeholder="Contoh: 120"
+                                className="input-modern w-full font-mono"
+                            />
                         </div>
 
                         <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
