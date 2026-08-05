@@ -10,9 +10,11 @@ interface HlsPlayerProps {
     autoPlay?: boolean;
     muted?: boolean;
     label?: string;
+    fit?: "fill" | "contain";
+    onClick?: () => void;
 }
 
-export default function HlsPlayer({ src, autoPlay = true, muted = true, label }: HlsPlayerProps) {
+export default function HlsPlayer({ src, autoPlay = true, muted = true, label, fit = "fill", onClick }: HlsPlayerProps) {
     const videoRef = useRef<HTMLVideoElement>(null);
     const [error, setError] = useState<string | null>(null);
     const [isPlaying, setIsPlaying] = useState(false);
@@ -91,14 +93,17 @@ export default function HlsPlayer({ src, autoPlay = true, muted = true, label }:
     }, [src]);
 
     return (
-        <div className="w-full aspect-video bg-black relative rounded-xl overflow-hidden group shadow-2xl border border-slate-800">
+        <div
+            className={`w-full aspect-video bg-black relative rounded-xl overflow-hidden group shadow-2xl border border-slate-800 ${onClick ? "cursor-pointer" : ""}`}
+            onClick={onClick}
+        >
             <video
                 ref={videoRef}
-                className="absolute top-0 left-0 w-full h-full object-fill"
+                className={`absolute top-0 left-0 w-full h-full ${fit === "contain" ? "object-contain" : "object-fill"}`}
                 width={1920}
                 height={1080}
                 muted={muted}
-                controls
+                controls={!onClick}
                 playsInline
             />
 

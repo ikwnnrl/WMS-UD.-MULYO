@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Save, Loader2, ArrowUpRight, Truck, User, FileText, Calendar, Box } from "lucide-react";
+import { ArrowLeft, Save, Loader2, ArrowUpRight, Truck, User, FileText, Calendar, Box, Printer, Receipt, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
@@ -13,13 +13,27 @@ interface Product {
     quantity: number;
 }
 
+interface Customer {
+    id: number;
+    name: string;
+    address?: string;
+}
+
 export default function OutboundPage() {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
     const [products, setProducts] = useState<Product[]>([]);
+    const [customers, setCustomers] = useState<Customer[]>([]);
 
     // State untuk opsi Bantuan
     const [isAssistance, setIsAssistance] = useState(false);
+
+    // Hasil setelah simpan sukses: nomor SJ otomatis + aksi cetak/invoice
+    const [savedResult, setSavedResult] = useState<{
+        id: number;
+        suratJalanNumber: string | null;
+    } | null>(null);
+    const [creatingInvoice, setCreatingInvoice] = useState(false);
 
     // Form State
     const [formData, setFormData] = useState({
@@ -28,12 +42,11 @@ export default function OutboundPage() {
 
         // Static Fields
         source: "CV. Bumi Mulia Lestari",
-        destination: "PT. Menara Laut Bersatu",
+        customerId: "",
 
         // Outbound Specific
         destinationWarehouse: "MLB 1", // Default to MLB 1
         poNumber: "",
-        suratJalanNumber: "",
 
         quantity: "",
 
@@ -44,6 +57,7 @@ export default function OutboundPage() {
     });
 
     const selectedProduct = products.find(p => p.id === parseInt(formData.productId));
+    const selectedCustomer = customers.find(c => c.id === parseInt(formData.customerId));
     const currentStock = selectedProduct?.quantity || 0;
 
     // Fetch Data
@@ -53,11 +67,20 @@ export default function OutboundPage() {
             const filtered = data.filter((p: any) => p.category === 'Barang Jadi');
             setProducts(filtered);
         });
+        fetch('/api/customers').then(res => res.json()).then((data) => {
+            setCustomers(Array.isArray(data) ? data : []);
+            // Default ke pelanggan pertama jika ada, mirip default MASTER!A2
+            setFormData(prev => ({
+                ...prev,
+                customerId: prev.customerId || (Array.isArray(data) && data[0] ? String(data[0].id) : ""),
+            }));
+        });
     }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
+        setSavedResult(null);
 
         const qty = parseFloat(formData.quantity);
         if (selectedProduct && qty > selectedProduct.quantity) {
@@ -73,6 +96,7 @@ export default function OutboundPage() {
                 body: JSON.stringify({
                     type: 'OUT',
                     productId: formData.productId,
+                    customerId: formData.customerId || null,
                     quantity: qty,
                     date: formData.date,
 
@@ -80,24 +104,58 @@ export default function OutboundPage() {
                     sourceWarehouse: null, // Outbound doesn't use source warehouse in the same way (it's from main)
                     destinationWarehouse: formData.destinationWarehouse,
                     poNumber: formData.poNumber,
-                    suratJalanNumber: formData.suratJalanNumber,
+                    // suratJalanNumber sengaja tidak dikirim: dibuat otomatis di server
+                    // (mirror Surat Jalan!D7: nomor urut + kode barang + gudang tujuan)
 
                     driverName: formData.driverName,
                     licensePlate: formData.licensePlate,
 
-                    notes: `Outbound ke ${formData.destination} (${formData.destinationWarehouse}) - ${isAssistance ? 'Bantuan ' : ''}${formData.notes}`
+                    notes: `Outbound ke ${selectedCustomer?.name || "-"} (${formData.destinationWarehouse}) - ${isAssistance ? 'Bantuan ' : ''}${formData.notes}`
                 })
             });
 
             if (!res.ok) throw new Error('Failed to save');
 
-            router.push('/transactions');
-            router.refresh();
+            const data = await res.json();
+            setSavedResult({ id: data.id, suratJalanNumber: data.suratJalanNumber || null });
         } catch (err) {
             alert('Terjadi kesalahan saat menyimpan data.');
         } finally {
             setLoading(false);
         }
+    };
+
+    const handlePrintSuratJalan = () => {
+        if (!savedResult) return;
+        window.open(`/api/transactions/${savedResult.id}/surat-jalan`, "_blank");
+    };
+
+    const handleCreateInvoice = async () => {
+        if (!savedResult) return;
+        setCreatingInvoice(true);
+        try {
+            const res = await fetch(`/api/transactions/${savedResult.id}/invoice`, { method: 'POST' });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "Gagal membuat invoice");
+            window.open(`/api/invoices/${data.id}/pdf`, "_blank");
+        } catch (err: any) {
+            alert(err.message || "Gagal membuat invoice.");
+        } finally {
+            setCreatingInvoice(false);
+        }
+    };
+
+    const handleNewEntry = () => {
+        setSavedResult(null);
+        setFormData(prev => ({
+            ...prev,
+            productId: "",
+            poNumber: "",
+            quantity: "",
+            driverName: "",
+            notes: "",
+        }));
+        router.refresh();
     };
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -179,12 +237,20 @@ export default function OutboundPage() {
                                     {formData.source}
                                 </div>
                             </div>
-                            <div>
-                                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 block">Ke</label>
-                                <div className="font-medium text-slate-800 dark:text-slate-200 flex items-center gap-2">
-                                    <div className="w-2 h-2 rounded-full bg-orange-500"></div>
-                                    PT. Menara Laut Bersatu
-                                </div>
+                            <div className="space-y-1">
+                                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 block">Ke (Pelanggan)</label>
+                                <select
+                                    name="customerId"
+                                    value={formData.customerId}
+                                    onChange={handleChange}
+                                    required
+                                    className="input-modern w-full font-medium"
+                                >
+                                    <option value="">-- Pilih Pelanggan --</option>
+                                    {customers.map(c => (
+                                        <option key={c.id} value={c.id}>{c.name}</option>
+                                    ))}
+                                </select>
                             </div>
                         </div>
 
@@ -203,15 +269,9 @@ export default function OutboundPage() {
                             </div>
                             <div className="space-y-2">
                                 <label className="text-sm font-medium text-slate-700 dark:text-slate-300">No Surat Jalan</label>
-                                <input
-                                    type="text"
-                                    name="suratJalanNumber"
-                                    value={formData.suratJalanNumber}
-                                    onChange={handleChange}
-                                    placeholder="Contoh: SJ-XXX-2024"
-                                    required
-                                    className="input-modern w-full font-mono"
-                                />
+                                <div className="input-modern w-full font-mono bg-slate-50 dark:bg-slate-800/50 text-slate-400 flex items-center">
+                                    Otomatis setelah disimpan
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -356,8 +416,8 @@ export default function OutboundPage() {
 
                             <button
                                 type="submit"
-                                disabled={loading}
-                                className="w-full py-4 btn-primary bg-orange-600 hover:bg-orange-700 shadow-orange-500/30"
+                                disabled={loading || !!savedResult}
+                                className="w-full py-4 btn-primary bg-orange-600 hover:bg-orange-700 shadow-orange-500/30 disabled:opacity-50"
                             >
                                 {loading ? <Loader2 className="animate-spin" /> : <ArrowUpRight size={20} />}
                                 Simpan Transaksi
@@ -366,6 +426,49 @@ export default function OutboundPage() {
                     </div>
                 </div>
             </form>
+
+            {/* Panel sukses: nomor Surat Jalan otomatis + aksi cetak (mirror tombol NOTA BARU di Excel) */}
+            {savedResult && (
+                <div className="glass-card border-2 border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-900/10 space-y-4">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-emerald-500 rounded-xl text-white shadow-lg shadow-emerald-500/30">
+                            <CheckCircle2 size={20} />
+                        </div>
+                        <div>
+                            <h3 className="font-bold text-slate-800 dark:text-slate-100">Transaksi tersimpan</h3>
+                            {savedResult.suratJalanNumber && (
+                                <p className="text-sm text-slate-600 dark:text-slate-400">
+                                    No. Surat Jalan: <span className="font-mono font-bold text-emerald-700 dark:text-emerald-400">{savedResult.suratJalanNumber}</span>
+                                </p>
+                            )}
+                        </div>
+                    </div>
+                    <div className="flex flex-wrap gap-3">
+                        <button
+                            type="button"
+                            onClick={handlePrintSuratJalan}
+                            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-medium hover:border-indigo-300 hover:text-indigo-600 transition-colors shadow-sm"
+                        >
+                            <Printer size={16} /> Cetak Surat Jalan
+                        </button>
+                        <button
+                            type="button"
+                            onClick={handleCreateInvoice}
+                            disabled={creatingInvoice}
+                            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-medium hover:border-emerald-300 hover:text-emerald-600 transition-colors shadow-sm disabled:opacity-50"
+                        >
+                            {creatingInvoice ? <Loader2 size={16} className="animate-spin" /> : <Receipt size={16} />} Buat & Cetak Invoice
+                        </button>
+                        <button
+                            type="button"
+                            onClick={handleNewEntry}
+                            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-medium transition-colors shadow-sm ml-auto"
+                        >
+                            <ArrowUpRight size={16} /> Input Transaksi Baru
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

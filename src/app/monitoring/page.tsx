@@ -19,11 +19,14 @@ export default function MonitoringPage() {
 
     const [showTest, setShowTest] = useState(false);
     const [activeChannel, setActiveChannel] = useState<'all' | number>('all');
+    const [popupChannel, setPopupChannel] = useState<number | null>(null);
 
     // Filter logic
     const filteredStreams = activeChannel === 'all'
         ? streams
         : streams.filter(s => s.id === activeChannel);
+
+    const popupStream = streams.find(s => s.id === popupChannel) ?? null;
 
     return (
         <div className="space-y-6">
@@ -67,7 +70,7 @@ export default function MonitoringPage() {
 
             {/* Main Grid: Dynamic Layout (Grid vs Single) */}
             <div className={activeChannel === 'all'
-                ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+                ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
                 : "max-w-5xl mx-auto" // Single View Mode (Lebih besar)
             }>
                 {filteredStreams.map((stream) => (
@@ -78,10 +81,40 @@ export default function MonitoringPage() {
                         <HlsPlayer
                             src={stream.url}
                             label={stream.name}
+                            onClick={() => setPopupChannel(stream.id)}
                         />
                     </div>
                 ))}
             </div>
+
+            {/* Popup Modal: Original aspect ratio, no crop */}
+            {popupStream && (
+                <div
+                    className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 md:p-10"
+                    onClick={() => setPopupChannel(null)}
+                >
+                    <div
+                        className="w-full max-w-4xl"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="flex justify-between items-center mb-3">
+                            <h3 className="text-white font-bold text-lg">{popupStream.name}</h3>
+                            <button
+                                onClick={() => setPopupChannel(null)}
+                                className="text-white/80 hover:text-white text-sm px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 transition"
+                            >
+                                Tutup ✕
+                            </button>
+                        </div>
+                        <HlsPlayer
+                            key={`popup-${popupStream.id}`}
+                            src={popupStream.url}
+                            label={popupStream.name}
+                            fit="contain"
+                        />
+                    </div>
+                </div>
+            )}
 
             {/* Test Stream Control */}
             <div className="flex justify-end pt-4">
