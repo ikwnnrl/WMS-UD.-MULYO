@@ -19,10 +19,59 @@ model Product {
   type         String        // 'Putusan', 'Onggok', 'Gaplek', 'Lainnya'
   quantity     Float         @default(0) // Menggunakan Float untuk mengakomodasi berat desimal
   minStock     Float         @default(10)
+  pricePerKg   Float?        // Harga jual per Kg (untuk Invoice) - setara MASTER!J di template Excel
   description  String?
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
   transactions Transaction[]
+}
+
+model Customer {
+  id           Int           @id @default(autoincrement())
+  name         String        // Nama pelanggan, mis. "PT. Menara Laut Bersatu"
+  address      String?       // Alamat lengkap (bisa multi-baris)
+  npwp         String?       // NPWP pelanggan (muncul di Invoice)
+  transactions Transaction[]
+  invoices     Invoice[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+model DocumentCounter {
+  id           Int      @id @default(autoincrement())
+  docType      String   @unique // 'SURAT_JALAN' atau 'INVOICE'
+  currentValue Int      @default(0)
+  updatedAt    DateTime @updatedAt
+}
+
+model Invoice {
+  id                Int       @id @default(autoincrement())
+  invoiceNumber     String    @unique // Format: INV-00012
+
+  transactionId     Int?
+  transaction       Transaction? @relation(fields: [transactionId], references: [id])
+
+  customerId        Int?
+  customer          Customer? @relation(fields: [customerId], references: [id])
+
+  date              DateTime  @default(now())
+
+  // Rincian tagihan (mengikuti pola Excel: 1 baris utama, subtotal, PPN 11%, total)
+  itemName          String?
+  quantity          Float?
+  pricePerKg        Float?
+  subtotal          Float     @default(0)
+  ppn               Float     @default(0) // PPN 11% dari subtotal
+  total             Float     @default(0) // subtotal + ppn
+
+  isPaid            Boolean   @default(false) // Status Lunas (checkbox hijau di Backup Invoice)
+  paidAt            DateTime?
+
+  pdfPath           String?   // Lokasi file PDF hasil cetak (jika disimpan ke disk)
+
+  notes             String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 }
 
 model Supplier {
@@ -50,6 +99,11 @@ model Transaction {
   // Relasi ke Supplier (Optional, biasanya untuk Inbound)
   supplierId      Int?
   supplier        Supplier? @relation(fields: [supplierId], references: [id])
+
+  // Relasi ke Customer (Optional, biasanya untuk Outbound / Surat Jalan)
+  customerId      Int?
+  customer        Customer? @relation(fields: [customerId], references: [id])
+  invoices        Invoice[]
 
   // Data Kuantitas & Harga
   quantity        Float    // Jumlah barang yang mempengaruhi stok (biasanya ikut Actual Weight)

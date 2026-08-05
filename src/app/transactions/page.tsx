@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ArrowDownLeft, ArrowUpRight, Search, Pencil, Trash2, X, FileText, Loader2, Filter, Calendar } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, Search, Pencil, Trash2, X, FileText, Loader2, Filter, Calendar, Printer, Receipt } from "lucide-react";
 import { cn } from "@/lib/utils";
 import ExportButton from "@/components/common/ExportButton";
 
@@ -22,6 +22,9 @@ interface Transaction {
     actualWeight?: number;
     initialStock?: number;
     finalStock?: number;
+    poNumber?: string;
+    suratJalanNumber?: string;
+    customerId?: number;
 }
 
 export default function TransactionsPage() {
@@ -78,6 +81,26 @@ export default function TransactionsPage() {
             fetchTransactions();
         } catch (err) {
             alert("Gagal menghapus transaksi.");
+        }
+    };
+
+    const handlePrintSuratJalan = (id: number) => {
+        window.open(`/api/transactions/${id}/surat-jalan`, "_blank");
+    };
+
+    const [creatingInvoiceId, setCreatingInvoiceId] = useState<number | null>(null);
+
+    const handleCreateInvoice = async (id: number) => {
+        setCreatingInvoiceId(id);
+        try {
+            const res = await fetch(`/api/transactions/${id}/invoice`, { method: 'POST' });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || "Gagal membuat invoice");
+            window.open(`/api/invoices/${data.id}/pdf`, "_blank");
+        } catch (err: any) {
+            alert(err.message || "Gagal membuat invoice.");
+        } finally {
+            setCreatingInvoiceId(null);
         }
     };
 
@@ -277,6 +300,25 @@ export default function TransactionsPage() {
                                             )}
                                         </td>
                                         <td className="p-5 flex justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            {tx.type === 'OUT' && tx.suratJalanNumber && (
+                                                <>
+                                                    <button
+                                                        onClick={() => handlePrintSuratJalan(tx.id)}
+                                                        className="p-2 bg-slate-100 hover:bg-white border border-slate-200 hover:border-indigo-300 text-slate-400 hover:text-indigo-600 dark:bg-slate-800 dark:hover:bg-slate-700 dark:border-slate-700 rounded-lg transition-all shadow-sm"
+                                                        title="Cetak Surat Jalan"
+                                                    >
+                                                        <Printer size={16} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleCreateInvoice(tx.id)}
+                                                        disabled={creatingInvoiceId === tx.id}
+                                                        className="p-2 bg-slate-100 hover:bg-white border border-slate-200 hover:border-emerald-300 text-slate-400 hover:text-emerald-600 dark:bg-slate-800 dark:hover:bg-slate-700 dark:border-slate-700 rounded-lg transition-all shadow-sm disabled:opacity-50"
+                                                        title="Buat & Cetak Invoice"
+                                                    >
+                                                        {creatingInvoiceId === tx.id ? <Loader2 size={16} className="animate-spin" /> : <Receipt size={16} />}
+                                                    </button>
+                                                </>
+                                            )}
                                             <button
                                                 onClick={() => handleEdit(tx)}
                                                 className="p-2 bg-slate-100 hover:bg-white border border-slate-200 hover:border-blue-300 text-slate-400 hover:text-blue-600 dark:bg-slate-800 dark:hover:bg-slate-700 dark:border-slate-700 rounded-lg transition-all shadow-sm"
