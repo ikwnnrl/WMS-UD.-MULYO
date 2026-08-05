@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
 import { renderToBuffer } from "@react-pdf/renderer";
 import React from "react";
+import path from "path";
 import prisma from "@/lib/prisma";
 import { InvoicePdf } from "@/components/pdf/InvoicePdf";
+
+const LOGO_PATH = path.join(process.cwd(), "public", "logo-bml.png");
 
 // GET /api/invoices/[id]/pdf — render an existing Invoice as a PDF.
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -39,6 +42,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
         subtotal: invoice.subtotal,
         ppn: invoice.ppn,
         total: invoice.total,
+        logoUrl: LOGO_PATH,
       })
     );
 

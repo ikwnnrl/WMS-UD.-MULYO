@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
 import { renderToBuffer } from "@react-pdf/renderer";
 import React from "react";
+import path from "path";
 import prisma from "@/lib/prisma";
 import { SuratJalanPdf } from "@/components/pdf/SuratJalanPdf";
+
+const LOGO_PATH = path.join(process.cwd(), "public", "logo-bml.png");
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -39,6 +42,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
             beratKg: transaction.quantity.toLocaleString("id-ID"),
           },
         ],
+        logoUrl: LOGO_PATH,
       })
     );
 
