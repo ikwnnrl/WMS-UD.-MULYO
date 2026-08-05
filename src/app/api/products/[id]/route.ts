@@ -13,6 +13,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
             where: { id: productId },
             data: {
                 minStock: body.minStock,
+                pricePerKg: body.pricePerKg !== undefined ? parseFloat(body.pricePerKg) : undefined,
                 description: body.description,
                 // Name, SKU, and Type are typically not editable to preserve historical data integrity, 
                 // but if requested we can enable it. For now, sticking to safe edits.

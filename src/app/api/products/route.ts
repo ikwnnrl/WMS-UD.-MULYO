@@ -31,6 +31,7 @@ export async function POST(request: Request) {
         type: body.type,
         quantity: parseFloat(body.quantity || 0),
         minStock: parseFloat(body.minStock || 10),
+        pricePerKg: body.pricePerKg ? parseFloat(body.pricePerKg) : null,
         description: body.description,
       },
     });
