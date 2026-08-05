@@ -47,7 +47,7 @@ export default function LoginPage() {
                         <Warehouse className="text-white" size={32} />
                     </div>
                     <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100">
-                        UD. Mulyo
+                        CV. Bumi Mulia Lestari
                     </h1>
                     <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm">
                         Warehouse Management System

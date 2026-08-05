@@ -71,7 +71,7 @@ export function Sidebar({ user }: { user?: { name: string, role: string } }) {
                             M
                         </div>
                         <div>
-                            <h1 className="font-bold text-lg text-white tracking-tight">UD. Mulyo</h1>
+                            <h1 className="font-bold text-lg text-white tracking-tight">CV. Bumi Mulia Lestari</h1>
                             <p className="text-[10px] uppercase tracking-wider text-slate-400 font-medium">Warehouse v2.0</p>
                         </div>
                     </div>

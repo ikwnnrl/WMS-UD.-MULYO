@@ -12,7 +12,7 @@ import { CommandMenu } from "@/components/CommandMenu";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-    title: "UD. Mulyo WMS",
+    title: "CV. Bumi Mulia Lestari WMS",
     description: "Warehouse Management System",
 };
 

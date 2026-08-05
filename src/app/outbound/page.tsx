@@ -27,7 +27,7 @@ export default function OutboundPage() {
         date: new Date().toISOString().split('T')[0],
 
         // Static Fields
-        source: "UD. Mulyo",
+        source: "CV. Bumi Mulia Lestari",
         destination: "PT. Menara Laut Bersatu",
 
         // Outbound Specific
