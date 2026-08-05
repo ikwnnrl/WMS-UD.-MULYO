@@ -43,7 +43,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
           },
         ],
         logoUrl: LOGO_PATH,
-      })
+      }) as any
     );
 
     return new NextResponse(pdfBuffer, {

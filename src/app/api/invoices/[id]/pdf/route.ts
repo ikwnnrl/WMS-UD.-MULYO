@@ -43,7 +43,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
         ppn: invoice.ppn,
         total: invoice.total,
         logoUrl: LOGO_PATH,
-      })
+      }) as any
     );
 
     return new NextResponse(pdfBuffer, {
