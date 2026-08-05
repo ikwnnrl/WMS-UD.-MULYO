@@ -1,5 +1,6 @@
 import bcrypt from "bcryptjs";
 import prisma from "@/lib/prisma";
+import { cookies } from "next/headers";
 
 const SALT_ROUNDS = 10;
 const MAX_ATTEMPTS = 5;
@@ -70,4 +71,30 @@ export async function recordLoginAttempt(username: string, success: boolean, ipA
   await prisma.loginAttempt.create({
     data: { username, success, ipAddress: ipAddress ?? null },
   });
+}
+
+/**
+ * Read the current session from the wms_session cookie, if any.
+ * Returns null if there is no session or it can't be parsed.
+ */
+export async function getSession(): Promise<{ id: number; username: string; name: string; role: string } | null> {
+  const cookieStore = await cookies();
+  const sessionCookie = cookieStore.get("wms_session");
+  if (!sessionCookie) return null;
+  try {
+    return JSON.parse(sessionCookie.value);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Require the current session to have the OWNER role.
+ * Returns the session if authorized, or null if not (caller should
+ * respond with 403).
+ */
+export async function requireOwner(): Promise<{ id: number; username: string; name: string; role: string } | null> {
+  const session = await getSession();
+  if (!session || session.role !== "OWNER") return null;
+  return session;
 }

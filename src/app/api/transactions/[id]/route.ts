@@ -1,10 +1,15 @@
 import { NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
+import { requireOwner } from "@/lib/auth";
 
 const prisma = new PrismaClient();
 
 // Handle PUT (Update Transaction)
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
+    const session = await requireOwner();
+    if (!session) {
+        return NextResponse.json({ error: "Hanya OWNER yang dapat mengubah transaksi." }, { status: 403 });
+    }
     try {
         const { id } = await params;
         const transactionId = parseInt(id);
@@ -76,6 +81,10 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
 
 // Handle DELETE (Remove Transaction)
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
+    const session = await requireOwner();
+    if (!session) {
+        return NextResponse.json({ error: "Hanya OWNER yang dapat menghapus transaksi." }, { status: 403 });
+    }
     try {
         const { id } = await params;
         const transactionId = parseInt(id);

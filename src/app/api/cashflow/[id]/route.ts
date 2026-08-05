@@ -1,9 +1,14 @@
 import { NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
+import { requireOwner } from "@/lib/auth";
 
 const prisma = new PrismaClient();
 
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
+    const session = await requireOwner();
+    if (!session) {
+        return NextResponse.json({ error: "Hanya OWNER yang dapat mengubah data cash flow." }, { status: 403 });
+    }
     try {
         const { id } = await params;
         const flowId = parseInt(id);
@@ -28,6 +33,10 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
 }
 
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
+    const session = await requireOwner();
+    if (!session) {
+        return NextResponse.json({ error: "Hanya OWNER yang dapat menghapus data cash flow." }, { status: 403 });
+    }
     try {
         const { id } = await params;
         const flowId = parseInt(id);

@@ -1,9 +1,14 @@
 import { NextResponse } from "next/server";
 import { PrismaClient, Prisma } from "@prisma/client";
+import { requireOwner } from "@/lib/auth";
 
 const prisma = new PrismaClient();
 
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
+    const session = await requireOwner();
+    if (!session) {
+        return NextResponse.json({ error: "Hanya OWNER yang dapat mengubah data supplier." }, { status: 403 });
+    }
     try {
         const { id } = await params;
         const supplierId = parseInt(id);
@@ -14,15 +19,15 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
         const p3 = parseFloat(body.priceTier3) || 0;
 
         await prisma.$executeRaw`
-            UPDATE Supplier 
-            SET name = ${body.name}, 
-                contact = ${body.contact}, 
-                bankName = ${body.bankName}, 
-                accountNumber = ${body.accountNumber}, 
-                priceTier1 = ${p1}, 
-                priceTier2 = ${p2}, 
-                priceTier3 = ${p3},
-                updatedAt = CURRENT_TIMESTAMP
+            UPDATE "Supplier"
+            SET name = ${body.name},
+                contact = ${body.contact},
+                "bankName" = ${body.bankName},
+                "accountNumber" = ${body.accountNumber},
+                "priceTier1" = ${p1},
+                "priceTier2" = ${p2},
+                "priceTier3" = ${p3},
+                "updatedAt" = CURRENT_TIMESTAMP
             WHERE id = ${supplierId}
         `;
 
@@ -36,6 +41,10 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
 
 
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
+    const session = await requireOwner();
+    if (!session) {
+        return NextResponse.json({ error: "Hanya OWNER yang dapat menghapus data supplier." }, { status: 403 });
+    }
     try {
         const { id } = await params;
         const supplierId = parseInt(id);
