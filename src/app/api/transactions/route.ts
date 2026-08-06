@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
-import { formatSuratJalanNumber } from "@/lib/document-numbering";
 
 const prisma = new PrismaClient();
 
@@ -44,24 +43,9 @@ export async function POST(request: Request) {
             const initialStock = product.quantity;
             const finalStock = initialStock + stockChange;
 
-            // Auto-generate No. Surat Jalan for outbound transactions, mirroring
-            // Surat Jalan!D7 in the Excel template: {00000}/{KodeBarang}/{GudangTujuan}.
-            // Only auto-generate when the caller didn't supply one manually.
-            // Uses `tx` (not the module-level `prisma`) so the counter increment
-            // participates in the same transaction/connection.
-            let suratJalanNumber = body.suratJalanNumber || null;
-            if (body.type === "OUT" && !suratJalanNumber) {
-                const counter = await tx.documentCounter.upsert({
-                    where: { docType: "SURAT_JALAN" },
-                    update: { currentValue: { increment: 1 } },
-                    create: { docType: "SURAT_JALAN", currentValue: 1 },
-                });
-                suratJalanNumber = formatSuratJalanNumber(
-                    counter.currentValue,
-                    product.sku,
-                    body.destinationWarehouse || "-"
-                );
-            }
+            // No. Surat Jalan & Invoice are printed directly from Excel now.
+            // WMS no longer generates document numbers — the field stays null.
+            const suratJalanNumber = body.suratJalanNumber || null;
 
             // Pelanggan tetap: satu-satunya pelanggan Outbound adalah "PT. Menara Laut
             // Bersatu" (tidak bisa dipilih/diubah dari UI). Cari atau buat record-nya

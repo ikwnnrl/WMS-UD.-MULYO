@@ -30,48 +30,10 @@ model Customer {
   id           Int           @id @default(autoincrement())
   name         String        // Nama pelanggan, mis. "PT. Menara Laut Bersatu"
   address      String?       // Alamat lengkap (bisa multi-baris)
-  npwp         String?       // NPWP pelanggan (muncul di Invoice)
+  npwp         String?       // NPWP pelanggan
   transactions Transaction[]
-  invoices     Invoice[]
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
-}
-
-model DocumentCounter {
-  id           Int      @id @default(autoincrement())
-  docType      String   @unique // 'SURAT_JALAN' atau 'INVOICE'
-  currentValue Int      @default(0)
-  updatedAt    DateTime @updatedAt
-}
-
-model Invoice {
-  id                Int       @id @default(autoincrement())
-  invoiceNumber     String    @unique // Format: INV-00012
-
-  transactionId     Int?
-  transaction       Transaction? @relation(fields: [transactionId], references: [id])
-
-  customerId        Int?
-  customer          Customer? @relation(fields: [customerId], references: [id])
-
-  date              DateTime  @default(now())
-
-  // Rincian tagihan (mengikuti pola Excel: 1 baris utama, subtotal, PPN 11%, total)
-  itemName          String?
-  quantity          Float?
-  pricePerKg        Float?
-  subtotal          Float     @default(0)
-  ppn               Float     @default(0) // PPN 11% dari subtotal
-  total             Float     @default(0) // subtotal + ppn
-
-  isPaid            Boolean   @default(false) // Status Lunas (checkbox hijau di Backup Invoice)
-  paidAt            DateTime?
-
-  pdfPath           String?   // Lokasi file PDF hasil cetak (jika disimpan ke disk)
-
-  notes             String?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
 }
 
 model Supplier {
@@ -103,7 +65,6 @@ model Transaction {
   // Relasi ke Customer (Optional, biasanya untuk Outbound / Surat Jalan)
   customerId      Int?
   customer        Customer? @relation(fields: [customerId], references: [id])
-  invoices        Invoice[]
 
   // Data Kuantitas & Harga
   quantity        Float    // Jumlah barang yang mempengaruhi stok (biasanya ikut Actual Weight)
@@ -128,7 +89,6 @@ model Transaction {
   sourceWarehouse String?  // KHUSUS PUTUSAN: Asal Gudang
   destinationWarehouse String? // Gudang Tujuan (Outbound)
   poNumber        String?  // No PO
-  suratJalanNumber String? // No Surat Jalan (Dokumen)
   
   notes           String?
   date            DateTime @default(now())

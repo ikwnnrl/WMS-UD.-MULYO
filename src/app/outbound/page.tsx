@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Loader2, ArrowUpRight, Truck, User, FileText, Calendar, Box, Printer, Receipt, CheckCircle2, X, Scale } from "lucide-react";
+import { ArrowLeft, Loader2, ArrowUpRight, Truck, User, FileText, Calendar, Box, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 
 interface Product {
@@ -21,17 +21,11 @@ export default function OutboundPage() {
     // State untuk opsi Bantuan
     const [isAssistance, setIsAssistance] = useState(false);
 
-    // Hasil setelah simpan sukses: nomor SJ otomatis + aksi cetak/invoice
+    // Hasil setelah simpan sukses
     const [savedResult, setSavedResult] = useState<{
         id: number;
-        suratJalanNumber: string | null;
         quantity: number;
     } | null>(null);
-
-    // Modal input berat manual untuk Invoice (bisa beda dari Surat Jalan karena susut timbang)
-    const [showInvoiceModal, setShowInvoiceModal] = useState(false);
-    const [invoiceWeight, setInvoiceWeight] = useState("");
-    const [creatingInvoice, setCreatingInvoice] = useState(false);
 
     // Form State
     const [formData, setFormData] = useState({
@@ -110,8 +104,6 @@ export default function OutboundPage() {
                     destinationWarehouse: formData.destinationWarehouse,
                     poNumber: poNumber,
                     unitCount: formData.unitCount ? parseInt(formData.unitCount) : null,
-                    // suratJalanNumber sengaja tidak dikirim: dibuat otomatis di server
-                    // (mirror Surat Jalan!D7: nomor urut + kode barang + gudang tujuan)
 
                     driverName: formData.driverName,
                     licensePlate: formData.licensePlate,
@@ -123,46 +115,11 @@ export default function OutboundPage() {
             if (!res.ok) throw new Error('Failed to save');
 
             const data = await res.json();
-            setSavedResult({ id: data.id, suratJalanNumber: data.suratJalanNumber || null, quantity: data.quantity });
+            setSavedResult({ id: data.id, quantity: data.quantity });
         } catch (err) {
             alert('Terjadi kesalahan saat menyimpan data.');
         } finally {
             setLoading(false);
-        }
-    };
-
-    const handlePrintSuratJalan = () => {
-        if (!savedResult) return;
-        window.open(`/api/transactions/${savedResult.id}/surat-jalan`, "_blank");
-    };
-
-    const openInvoiceModal = () => {
-        if (!savedResult) return;
-        // Pre-fill dengan berat Surat Jalan; user bisa koreksi karena susut timbang
-        setInvoiceWeight(String(savedResult.quantity));
-        setShowInvoiceModal(true);
-    };
-
-    const handleCreateInvoice = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!savedResult) return;
-        setCreatingInvoice(true);
-        try {
-            const res = await fetch(`/api/transactions/${savedResult.id}/invoice`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    actualWeight: invoiceWeight ? parseFloat(invoiceWeight) : undefined,
-                }),
-            });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error || "Gagal membuat invoice");
-            setShowInvoiceModal(false);
-            window.open(`/api/invoices/${data.id}/pdf`, "_blank");
-        } catch (err: any) {
-            alert(err.message || "Gagal membuat invoice.");
-        } finally {
-            setCreatingInvoice(false);
         }
     };
 
@@ -480,7 +437,7 @@ export default function OutboundPage() {
                 </div>
             </form>
 
-            {/* Panel sukses: nomor Surat Jalan otomatis + aksi cetak (mirror tombol NOTA BARU di Excel) */}
+            {/* Panel sukses */}
             {savedResult && (
                 <div className="glass-card border-2 border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-900/10 space-y-4">
                     <div className="flex items-center gap-3">
@@ -489,28 +446,12 @@ export default function OutboundPage() {
                         </div>
                         <div>
                             <h3 className="font-bold text-slate-800 dark:text-slate-100">Transaksi tersimpan</h3>
-                            {savedResult.suratJalanNumber && (
-                                <p className="text-sm text-slate-600 dark:text-slate-400">
-                                    No. Surat Jalan: <span className="font-mono font-bold text-emerald-700 dark:text-emerald-400">{savedResult.suratJalanNumber}</span>
-                                </p>
-                            )}
+                            <p className="text-sm text-slate-600 dark:text-slate-400">
+                                {savedResult.quantity.toLocaleString()} Kg telah dicatat keluar.
+                            </p>
                         </div>
                     </div>
                     <div className="flex flex-wrap gap-3">
-                        <button
-                            type="button"
-                            onClick={handlePrintSuratJalan}
-                            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-medium hover:border-indigo-300 hover:text-indigo-600 transition-colors shadow-sm"
-                        >
-                            <Printer size={16} /> Cetak Surat Jalan
-                        </button>
-                        <button
-                            type="button"
-                            onClick={openInvoiceModal}
-                            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-medium hover:border-emerald-300 hover:text-emerald-600 transition-colors shadow-sm"
-                        >
-                            <Receipt size={16} /> Buat & Cetak Invoice
-                        </button>
                         <button
                             type="button"
                             onClick={handleNewEntry}
@@ -518,52 +459,6 @@ export default function OutboundPage() {
                         >
                             <ArrowUpRight size={16} /> Input Transaksi Baru
                         </button>
-                    </div>
-                </div>
-            )}
-
-            {/* Modal input berat manual untuk Invoice (bisa beda dari Surat Jalan karena susut timbang) */}
-            {showInvoiceModal && (
-                <div
-                    className="fixed inset-0 bg-slate-900/50 flex items-center justify-center p-4 z-50 backdrop-blur-md"
-                    onClick={() => setShowInvoiceModal(false)}
-                >
-                    <div
-                        className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-sm p-6 space-y-4 shadow-2xl border border-white/20 dark:border-slate-800"
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-4">
-                            <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
-                                <Scale size={20} className="text-emerald-600" /> Berat Invoice
-                            </h2>
-                            <button onClick={() => setShowInvoiceModal(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
-                                <X size={22} />
-                            </button>
-                        </div>
-                        <p className="text-sm text-slate-500 dark:text-slate-400">
-                            Berat di Surat Jalan: <span className="font-bold">{savedResult?.quantity.toLocaleString()} Kg</span>. Sesuaikan dengan hasil timbang jika ada susut.
-                        </p>
-                        <form onSubmit={handleCreateInvoice} className="space-y-4 pt-2">
-                            <div>
-                                <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 block">Berat Aktual (Kg)</label>
-                                <input
-                                    type="number"
-                                    step="0.01"
-                                    required
-                                    className="input-modern w-full text-2xl font-bold text-center text-emerald-600"
-                                    value={invoiceWeight}
-                                    onChange={e => setInvoiceWeight(e.target.value)}
-                                />
-                            </div>
-                            <div className="flex gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
-                                <button type="button" onClick={() => setShowInvoiceModal(false)} className="btn-secondary flex-1">
-                                    Batal
-                                </button>
-                                <button type="submit" disabled={creatingInvoice} className="btn-primary flex-1">
-                                    {creatingInvoice ? <Loader2 className="animate-spin" size={18} /> : "Buat Invoice"}
-                                </button>
-                            </div>
-                        </form>
                     </div>
                 </div>
             )}
