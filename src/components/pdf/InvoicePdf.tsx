@@ -2,12 +2,19 @@ import React from "react";
 import { Document, Page, Text, View, StyleSheet, Image } from "@react-pdf/renderer";
 import { terbilangRupiah } from "@/lib/terbilang";
 
-// Invoice sheet in Excel is portrait A4, but content (B2:G29) is designed to be
-// printed twice per A4 sheet (top half / bottom half) via the RunInvoiceHalf("atas"/"bawah")
-// macro — i.e. half-A4 per copy (~210 x 148.5mm), not the custom continuous-form
-// size used by Surat Jalan.
-const PAGE_WIDTH = 210 * 2.8346; // A4 width in points
-const PAGE_HEIGHT = 148.5 * 2.8346; // half A4 height in points
+// Replikasi sheet "INVOICE" print area B2:G29.
+// Spec section 3: A4 portrait, dicetak 2x per lembar (atas/bawah via RunInvoiceHalf).
+// Di web: 1 PDF = 1 half-A4 (210 x 148.5mm).
+const PAGE_WIDTH = 210 * 2.8346; // A4 width
+const PAGE_HEIGHT = 148.5 * 2.8346; // half A4 height
+
+// Proporsi kolom dari lebar kolom Excel (B/C/D/E/F+G):
+// No 11% | Nama 20% | Kuantitas 14% | Harga 16% | Jumlah 39%
+const W_NO = "11%";
+const W_NAMA = "20%";
+const W_KUANT = "14%";
+const W_HARGA = "16%";
+const W_JUMLAH = "39%";
 
 const styles = StyleSheet.create({
   page: {
@@ -20,49 +27,23 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontFamily: "Helvetica",
   },
-  headerRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-  },
-  companyBlock: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 6,
-  },
-  logo: {
-    width: 30,
-    height: 30,
-  },
-  companyName: {
-    fontSize: 12,
-    fontWeight: 700,
-  },
-  companyDetail: {
-    fontSize: 9,
-  },
-  invoiceTitle: {
-    fontSize: 22,
-    fontWeight: 700,
-  },
-  section: {
-    marginTop: 6,
-  },
-  infoRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 6,
-    marginBottom: 4,
-  },
+  headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
+  companyBlock: { flexDirection: "row", alignItems: "flex-start", gap: 6 },
+  // Logo spec section 2: ~30.6 x 44.8pt (portrait, ratio 0.68)
+  logo: { width: 24, height: 35 },
+  companyName: { fontSize: 12, fontWeight: 700 },
+  companyDetail: { fontSize: 9 },
+  invoiceTitle: { fontSize: 22, fontWeight: 700 },
+  section: { marginTop: 6 },
+  infoRow: { flexDirection: "row", justifyContent: "space-between", marginTop: 6, marginBottom: 4 },
   infoLeft: { width: "48%" },
   infoRight: { width: "48%" },
   pelangganLabel: { fontSize: 10, fontWeight: 700, marginBottom: 1 },
   infoLine: { flexDirection: "row", marginBottom: 1 },
   infoLabel: { width: 78, fontSize: 9 },
   infoValue: { fontSize: 9, fontWeight: 700, flex: 1 },
-  table: {
-    marginTop: 6,
-  },
+  table: { marginTop: 6 },
+  // Border thin continuous seluruh tabel B14:G19
   tableHeaderRow: {
     flexDirection: "row",
     borderTopWidth: 0.75,
@@ -70,72 +51,29 @@ const styles = StyleSheet.create({
     borderColor: "#000",
     paddingVertical: 3,
   },
-  tableHeaderCell: {
-    fontSize: 9,
-    fontWeight: 700,
-    textAlign: "center",
-  },
-  tableRow: {
-    flexDirection: "row",
-    paddingVertical: 4,
-    minHeight: 16,
-  },
-  colNo: { width: "8%", textAlign: "center" },
-  colNama: { width: "34%", textAlign: "center" },
-  colKuantitas: { width: "20%", textAlign: "center" },
-  colHarga: { width: "18%", textAlign: "center" },
-  colJumlah: { width: "20%", textAlign: "center" },
+  tableHeaderCell: { fontSize: 9, fontWeight: 700, textAlign: "center" },
+  tableRow: { flexDirection: "row", paddingVertical: 4, minHeight: 16 },
+  colNo: { width: W_NO, textAlign: "center" },
+  colNama: { width: W_NAMA, textAlign: "center" },
+  colKuantitas: { width: W_KUANT, textAlign: "center" },
+  colHarga: { width: W_HARGA, textAlign: "center" },
+  colJumlah: { width: W_JUMLAH, textAlign: "right", paddingRight: 4 },
   tableCell: { fontSize: 9 },
-  totalsBlock: {
-    marginTop: 2,
-  },
-  totalRow: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    marginBottom: 1,
-    borderTopWidth: 0,
-  },
-  totalRowFirst: {
-    borderTopWidth: 0.75,
-    borderColor: "#000",
-    paddingTop: 2,
-  },
-  totalLabel: { width: "28%", textAlign: "left", fontSize: 9 },
-  totalValue: { width: "20%", textAlign: "center", fontSize: 9 },
-  grandTotalRow: {
-    borderBottomWidth: 0.75,
-    borderColor: "#000",
-    paddingBottom: 2,
-  },
-  terbilang: {
-    marginTop: 5,
-    fontSize: 8,
-    fontStyle: "italic",
-  },
-  footer: {
-    marginTop: 8,
-  },
-  footerTitle: {
-    fontSize: 8,
-    fontWeight: 700,
-  },
-  footerText: {
-    fontSize: 8,
-  },
-  signatureBlock: {
-    marginTop: 10,
-    alignItems: "flex-end",
-  },
-  signatureLabel: {
-    fontSize: 11,
-    textAlign: "center",
-  },
-  signatureCompany: {
-    marginTop: 26,
-    fontSize: 11,
-    fontWeight: 700,
-    textAlign: "center",
-  },
+  totalsBlock: { marginTop: 2 },
+  // Label LEFT, value RIGHT (mirror Excel B17:E17 left, F17:G17 right)
+  totalRow: { flexDirection: "row", justifyContent: "flex-end", marginBottom: 1, borderTopWidth: 0 },
+  totalRowFirst: { borderTopWidth: 0.75, borderColor: "#000", paddingTop: 2 },
+  totalLabel: { width: "61%", textAlign: "left", fontSize: 9 },
+  totalValue: { width: "39%", textAlign: "right", fontSize: 9, paddingRight: 4 },
+  // TOTAL AKHIR: border thick atas+bawah, bold (spec section 2 "Border emphasis")
+  grandTotalRow: { borderBottomWidth: 1.5, borderColor: "#000", paddingBottom: 2, borderTopWidth: 1.5 },
+  terbilang: { marginTop: 5, fontSize: 8, fontStyle: "italic" },
+  footer: { marginTop: 8 },
+  footerTitle: { fontSize: 8, fontWeight: 700 },
+  footerText: { fontSize: 8 },
+  signatureBlock: { marginTop: 10, alignItems: "flex-end" },
+  signatureLabel: { fontSize: 11, textAlign: "center" },
+  signatureCompany: { marginTop: 26, fontSize: 11, fontWeight: 700, textAlign: "center" },
 });
 
 export interface InvoicePdfProps {
@@ -154,6 +92,17 @@ export interface InvoicePdfProps {
   logoUrl?: string;
 }
 
+// Format mirror Excel number format:
+// - Kuantitas: #.##0" Kg"  → "6.000 Kg"
+// - Harga: "Rp "#,##0      → "Rp 4.350"
+// - Jumlah: "Rp "#,##0
+function formatKg(n: number) {
+  return `${n.toLocaleString("id-ID")} Kg`;
+}
+function formatRupiah(n: number) {
+  return `Rp ${Math.round(n).toLocaleString("id-ID")}`;
+}
+
 export function InvoicePdf({
   invoiceNumber,
   suratJalanNumber,
@@ -169,8 +118,6 @@ export function InvoicePdf({
   total,
   logoUrl,
 }: InvoicePdfProps) {
-  const formatRupiah = (n: number) => `Rp ${Math.round(n).toLocaleString("id-ID")}`;
-
   return (
     <Document>
       <Page size={{ width: PAGE_WIDTH, height: PAGE_HEIGHT }} style={styles.page}>
@@ -223,9 +170,9 @@ export function InvoicePdf({
           <View style={styles.tableRow}>
             <Text style={[styles.tableCell, styles.colNo]}>1</Text>
             <Text style={[styles.tableCell, styles.colNama]}>{itemName}</Text>
-            <Text style={[styles.tableCell, styles.colKuantitas]}>{quantity.toLocaleString("id-ID")}</Text>
-            <Text style={[styles.tableCell, styles.colHarga]}>{pricePerKg.toLocaleString("id-ID")}</Text>
-            <Text style={[styles.tableCell, styles.colJumlah]}>{subtotal.toLocaleString("id-ID")}</Text>
+            <Text style={[styles.tableCell, styles.colKuantitas]}>{formatKg(quantity)}</Text>
+            <Text style={[styles.tableCell, styles.colHarga]}>{formatRupiah(pricePerKg)}</Text>
+            <Text style={[styles.tableCell, styles.colJumlah]}>{formatRupiah(subtotal)}</Text>
           </View>
         </View>
 
@@ -239,8 +186,8 @@ export function InvoicePdf({
             <Text style={styles.totalValue}>{formatRupiah(ppn)}</Text>
           </View>
           <View style={[styles.totalRow, styles.grandTotalRow]}>
-            <Text style={styles.totalLabel}>TOTAL AKHIR</Text>
-            <Text style={styles.totalValue}>{formatRupiah(total)}</Text>
+            <Text style={[styles.totalLabel, { fontWeight: 700 }]}>TOTAL AKHIR</Text>
+            <Text style={[styles.totalValue, { fontWeight: 700 }]}>{formatRupiah(total)}</Text>
           </View>
         </View>
 

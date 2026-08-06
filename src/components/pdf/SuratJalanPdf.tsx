@@ -1,16 +1,20 @@
 import React from "react";
-import { Document, Page, Text, View, StyleSheet, Image, Font } from "@react-pdf/renderer";
+import { Document, Page, Text, View, StyleSheet, Image } from "@react-pdf/renderer";
 
-// Custom paper size matching the original Excel print setup:
-// Custom 9.5 x 5.5 inch (241.3 x 139.7 mm), Landscape.
-// This is HALF of a continuous-form sheet (perforated in the middle) —
-// the physical form is 2x this height, printed twice (top half / bottom half),
-// mirroring the Excel macros RunInvoiceHalf("atas") / RunInvoiceHalf("bawah").
-const PAGE_WIDTH = 241.3 * 2.8346; // mm to points (1mm = 2.8346pt)
+// Replikasi sheet "Surat Jalan" print area B2:J23.
+// Kertas: custom continuous form half, 9.5 x 5.5 inch = 241.3 x 139.7mm (landscape).
+// (Spec section: kertas continuous form perforasi tengah, 1 SJ per half.)
+const PAGE_WIDTH = 241.3 * 2.8346; // mm → points (1mm = 2.8346pt)
 const PAGE_HEIGHT = 139.7 * 2.8346;
 
 const NAVY = "#17365D";
 const GRAY_LABEL = "#555555";
+
+// Proporsi kolom dihitung dari lebar kolom Excel:
+// B+C (Unit) = 26%, D+E+F (Nama Barang) = 53%, G (Berat) = 21%
+const W_UNIT = "26%";
+const W_NAMA = "53%";
+const W_BERAT = "21%";
 
 const styles = StyleSheet.create({
   page: {
@@ -20,7 +24,7 @@ const styles = StyleSheet.create({
     paddingBottom: 4,
     paddingLeft: 10,
     paddingRight: 8,
-    fontSize: 8,
+    fontSize: 9,
     fontFamily: "Helvetica",
   },
   headerRow: {
@@ -33,105 +37,33 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
   },
+  // Logo Excel ~455695 × 666070 EMU = 36pt × 52.6pt (portrait, ratio ~0.68)
   logo: {
-    width: 34,
-    height: 34,
+    width: 30,
+    height: 44,
   },
   companyTextBlock: {
     justifyContent: "center",
   },
-  companyName: {
-    fontSize: 12,
-    fontWeight: 700,
-    color: NAVY,
-    textAlign: "center",
-  },
-  companyDetail: {
-    fontSize: 8,
-    color: "#000",
-    textAlign: "center",
-  },
-  companyTagline: {
-    fontSize: 8,
-    fontWeight: 700,
-    color: GRAY_LABEL,
-    textAlign: "center",
-  },
-  rightBlock: {
-    alignItems: "flex-end",
-    maxWidth: 150,
-  },
-  rightDate: {
-    fontSize: 8,
-    fontWeight: 700,
-    color: NAVY,
-  },
-  rightLabel: {
-    fontSize: 8,
-    fontWeight: 700,
-    color: NAVY,
-    marginTop: 2,
-  },
-  rightValue: {
-    fontSize: 9,
-    textAlign: "right",
-  },
-  title: {
-    fontSize: 13,
-    fontWeight: 700,
-    textAlign: "center",
-    color: NAVY,
-    marginTop: 2,
-    marginBottom: 2,
-    letterSpacing: 0.5,
-  },
-  infoRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 3,
-  },
-  infoLeft: {
-    width: "62%",
-  },
-  infoRight: {
-    width: "36%",
-  },
-  infoLine: {
-    flexDirection: "row",
-    marginBottom: 1,
-  },
-  infoLabel: {
-    width: 62,
-    fontSize: 9,
-    fontWeight: 700,
-    color: NAVY,
-  },
-  infoValue: {
-    fontSize: 9,
-    fontWeight: 700,
-    color: NAVY,
-    flex: 1,
-  },
-  intro: {
-    fontSize: 9,
-    fontStyle: "italic",
-    color: GRAY_LABEL,
-    marginBottom: 2,
-  },
-  table: {
-    marginTop: 1,
-  },
-  tableHeaderRow: {
-    flexDirection: "row",
-    backgroundColor: NAVY,
-    paddingVertical: 2,
-  },
-  tableHeaderCell: {
-    fontSize: 9,
-    fontWeight: 700,
-    color: "#FFFFFF",
-    textAlign: "center",
-  },
+  companyName: { fontSize: 12, fontWeight: 700, color: NAVY, textAlign: "center" },
+  companyDetail: { fontSize: 8, color: "#000", textAlign: "center" },
+  companyTagline: { fontSize: 8, fontWeight: 700, color: GRAY_LABEL, textAlign: "center" },
+  rightBlock: { alignItems: "flex-end", maxWidth: 150 },
+  rightDate: { fontSize: 8, fontWeight: 700, color: NAVY },
+  rightLabel: { fontSize: 8, fontWeight: 700, color: NAVY, marginTop: 2 },
+  rightValue: { fontSize: 9, textAlign: "right" },
+  title: { fontSize: 13, fontWeight: 700, textAlign: "center", color: NAVY, marginTop: 2, marginBottom: 2 },
+  infoRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 3 },
+  infoLeft: { width: "62%" },
+  infoRight: { width: "36%" },
+  infoLine: { flexDirection: "row", marginBottom: 1 },
+  infoLabel: { width: 62, fontSize: 9, fontWeight: 700, color: NAVY },
+  infoValue: { fontSize: 9, fontWeight: 700, color: NAVY, flex: 1 },
+  intro: { fontSize: 9, fontStyle: "italic", color: GRAY_LABEL, marginBottom: 2 },
+  table: { marginTop: 1 },
+  // Header tabel: background NAVY solid, teks PUTIH (mirror Excel B11:G11 fill #17365D)
+  tableHeaderRow: { flexDirection: "row", backgroundColor: NAVY, paddingVertical: 2 },
+  tableHeaderCell: { fontSize: 9, fontWeight: 700, color: "#FFFFFF", textAlign: "center" },
   tableRow: {
     flexDirection: "row",
     borderBottomWidth: 0.5,
@@ -139,38 +71,15 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     minHeight: 13,
   },
-  colUnit: { width: "15%", textAlign: "center" },
-  colNama: { width: "55%", textAlign: "center" },
-  colBerat: { width: "30%", textAlign: "right", paddingRight: 4 },
-  tableCell: {
-    fontSize: 9,
-  },
-  signatureRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 14,
-  },
-  signatureBlock: {
-    width: "40%",
-    alignItems: "center",
-  },
-  signatureLabel: {
-    fontSize: 9,
-    color: "#666",
-    textAlign: "center",
-  },
-  signatureSpace: {
-    marginTop: 26,
-    fontSize: 9,
-    textAlign: "center",
-  },
-  signatureCompany: {
-    marginTop: 26,
-    fontSize: 9,
-    fontWeight: 700,
-    color: NAVY,
-    textAlign: "center",
-  },
+  colUnit: { width: W_UNIT, textAlign: "center" },
+  colNama: { width: W_NAMA, textAlign: "center" },
+  colBerat: { width: W_BERAT, textAlign: "right", paddingRight: 4 },
+  tableCell: { fontSize: 9 },
+  signatureRow: { flexDirection: "row", justifyContent: "space-between", marginTop: 14 },
+  signatureBlock: { width: "40%", alignItems: "center" },
+  signatureLabel: { fontSize: 9, color: "#666", textAlign: "center" },
+  signatureSpace: { marginTop: 26, fontSize: 9, textAlign: "center" },
+  signatureCompany: { marginTop: 26, fontSize: 9, fontWeight: 700, color: NAVY, textAlign: "center" },
 });
 
 export interface SuratJalanItem {
@@ -183,7 +92,7 @@ export interface SuratJalanPdfProps {
   noSuratJalan: string;
   noPO: string;
   noPolisi: string;
-  tanggal: string; // e.g. "5 Agustus 2026"
+  tanggal: string;
   namaPelanggan: string;
   alamatPelanggan: string;
   items: SuratJalanItem[];
@@ -200,7 +109,7 @@ export function SuratJalanPdf({
   items,
   logoUrl,
 }: SuratJalanPdfProps) {
-  // Tabel Excel punya 6 baris item (B12:G17); isi baris kosong agar tinggi tabel konsisten.
+  // Tabel Excel punya 6 baris item (B12:G17); pad agar tinggi tabel konsisten.
   const paddedItems: SuratJalanItem[] = [...items];
   while (paddedItems.length < 6) {
     paddedItems.push({ unit: "", namaBarang: "", beratKg: "" });
