@@ -23,7 +23,6 @@ interface Transaction {
     initialStock?: number;
     finalStock?: number;
     poNumber?: string;
-    suratJalanNumber?: string;
     customerId?: number;
 }
 

@@ -43,9 +43,8 @@ export async function POST(request: Request) {
             const initialStock = product.quantity;
             const finalStock = initialStock + stockChange;
 
-            // No. Surat Jalan & Invoice are printed directly from Excel now.
-            // WMS no longer generates document numbers — the field stays null.
-            const suratJalanNumber = body.suratJalanNumber || null;
+            // Surat Jalan dan Invoice dicetak langsung dari Excel, bukan dari WMS.
+            // WMS hanya menyimpan data stok dan logistik.
 
             // Pelanggan tetap: satu-satunya pelanggan Outbound adalah "PT. Menara Laut
             // Bersatu" (tidak bisa dipilih/diubah dari UI). Cari atau buat record-nya
@@ -82,7 +81,6 @@ export async function POST(request: Request) {
                     sourceWarehouse: body.sourceWarehouse,
                     destinationWarehouse: body.destinationWarehouse,
                     poNumber: body.poNumber,
-                    suratJalanNumber,
                     notes: body.notes,
                     date: body.date ? new Date(body.date) : new Date(),
                     initialStock: initialStock,
