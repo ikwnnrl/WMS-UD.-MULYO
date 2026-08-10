@@ -34,7 +34,11 @@ export function middleware(request: NextRequest) {
     if (pathname.startsWith("/api/")) {
       return NextResponse.json({ error: "Unauthorized. Silakan login." }, { status: 401 });
     }
-    const loginUrl = new URL("/login", request.url);
+    // Build login URL from the Host header so redirects work behind Cloudflare Tunnel.
+    // (request.url contains localhost:3001 because Next binds to 127.0.0.1, which breaks mobile/external access.)
+    const host = request.headers.get("host") || "wms.bumimulialestari.id";
+    const proto = request.headers.get("x-forwarded-proto") || "https";
+    const loginUrl = new URL("/login", `${proto}://${host}`);
     return NextResponse.redirect(loginUrl);
   }
 
