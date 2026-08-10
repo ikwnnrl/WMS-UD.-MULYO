@@ -15,9 +15,11 @@ interface HlsPlayerProps {
 }
 
 // Watchdog: jika stream stuck (kuning/hitam) lebih dari ini, reload HLS instance.
+// Retry terbatas supaya tidak membebani STB bermemori kecil. Setelah retry habis,
+// player diam (dot kuning) — user bisa refresh manual jika perlu.
 const STUCK_TIMEOUT_MS = 10000;
-const MAX_RETRIES = 6;
-const RETRY_DELAY_MS = 2000;
+const MAX_RETRIES = 3;
+const RETRY_DELAY_MS = 3000;
 
 export default function HlsPlayer({ src, autoPlay = true, muted = true, label, fit = "fill", onClick }: HlsPlayerProps) {
     const videoRef = useRef<HTMLVideoElement>(null);
@@ -84,20 +86,9 @@ export default function HlsPlayer({ src, autoPlay = true, muted = true, label, f
                         retryTimerRef.current = setTimeout(() => {
                             startHls(attempt);
                         }, RETRY_DELAY_MS);
-                    } else {
-                        // Setelah MAX_RETRIES, tetap loop setiap STUCK_TIMEOUT_MS (unlimited)
-                        // supaya stream bisa recover sendiri tanpa user refresh.
-                        retryCountRef.current = 0;
-                        const oldHls = hlsRef.current;
-                        if (oldHls) {
-                            oldHls.destroy();
-                            hlsRef.current = null;
-                        }
-                        setIsLoading(true);
-                        retryTimerRef.current = setTimeout(() => {
-                            startHls(1);
-                        }, RETRY_DELAY_MS);
                     }
+                    // Setelah MAX_RETRIES habis: player diam (dot kuning).
+                    // Jangan loop unlimited — membebani STB bermemori kecil dan bikin WMS crash/502.
                 }
             }, STUCK_TIMEOUT_MS);
         };
