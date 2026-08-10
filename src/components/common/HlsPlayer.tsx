@@ -14,11 +14,36 @@ interface HlsPlayerProps {
     onClick?: () => void;
 }
 
+// Watchdog: jika stream stuck (kuning) lebih dari ini, reload HLS instance.
+const STUCK_TIMEOUT_MS = 12000;
+const MAX_RETRIES = 3;
+const RETRY_DELAY_MS = 2000;
+
 export default function HlsPlayer({ src, autoPlay = true, muted = true, label, fit = "fill", onClick }: HlsPlayerProps) {
     const videoRef = useRef<HTMLVideoElement>(null);
     const [error, setError] = useState<string | null>(null);
     const [isPlaying, setIsPlaying] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
+
+    // Refs supaya watchdog bisa akses state terbaru tanpa re-create effect.
+    const hlsRef = useRef<Hls | null>(null);
+    const retryCountRef = useRef(0);
+    const watchdogRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    const clearWatchdog = () => {
+        if (watchdogRef.current) {
+            clearTimeout(watchdogRef.current);
+            watchdogRef.current = null;
+        }
+    };
+
+    const clearRetryTimer = () => {
+        if (retryTimerRef.current) {
+            clearTimeout(retryTimerRef.current);
+            retryTimerRef.current = null;
+        }
+    };
 
     useEffect(() => {
         const video = videoRef.current;
@@ -28,20 +53,69 @@ export default function HlsPlayer({ src, autoPlay = true, muted = true, label, f
         setError(null);
         setIsLoading(true);
         setIsPlaying(false);
-
-        let hls: Hls | null = null;
+        retryCountRef.current = 0;
+        clearWatchdog();
+        clearRetryTimer();
 
         const handleSuccess = () => {
             setIsLoading(false);
             setIsPlaying(true);
+            retryCountRef.current = 0; // reset retry counter on real success
+            clearWatchdog();
         };
 
-        if (Hls.isSupported()) {
-            hls = new Hls({
+        // Watchdog: kalau setelah manifest ter-parse masih belum playing dalam STUCK_TIMEOUT_MS,
+        // anggap stream stuck (kuning terlalu lama) → reload HLS instance.
+        const startWatchdog = () => {
+            clearWatchdog();
+            watchdogRef.current = setTimeout(() => {
+                if (!video) return;
+                if (video.paused || video.ended || video.currentTime === 0) {
+                    // Masih belum play → reload
+                    if (retryCountRef.current < MAX_RETRIES) {
+                        retryCountRef.current += 1;
+                        const attempt = retryCountRef.current;
+                        const oldHls = hlsRef.current;
+                        if (oldHls) {
+                            oldHls.destroy();
+                            hlsRef.current = null;
+                        }
+                        setIsLoading(true);
+                        retryTimerRef.current = setTimeout(() => {
+                            startHls(attempt);
+                        }, RETRY_DELAY_MS);
+                    }
+                }
+            }, STUCK_TIMEOUT_MS);
+        };
+
+        const startHls = (attempt: number) => {
+            if (!Hls.isSupported()) {
+                if (video.canPlayType("application/vnd.apple.mpegurl")) {
+                    video.src = src;
+                    const onLoaded = () => {
+                        video.play()
+                            .then(handleSuccess)
+                            .catch(() => setIsLoading(false));
+                    };
+                    video.addEventListener("loadedmetadata", onLoaded, { once: true });
+                    startWatchdog();
+                } else {
+                    setError("HLS Not Supported");
+                }
+                return;
+            }
+
+            const hls = new Hls({
                 enableWorker: true,
-                lowLatencyMode: true,
-                backBufferLength: 90
+                // lowLatencyMode false: stream Ezviz bukan LL-HLS; mode true terlalu agresif
+                // untuk stream yang segmennya lambat, sering bikin stall di channel 7.
+                lowLatencyMode: false,
+                backBufferLength: 90,
+                maxBufferLength: 30,
+                maxMaxBufferLength: 60,
             });
+            hlsRef.current = hls;
 
             hls.loadSource(src);
             hls.attachMedia(video);
@@ -52,42 +126,48 @@ export default function HlsPlayer({ src, autoPlay = true, muted = true, label, f
                     .catch((e) => {
                         console.warn("Autoplay blocked:", e);
                         setIsLoading(false);
+                        startWatchdog();
                     });
             });
+
+            // Video event: kalau mulai play, sukses.
+            const onPlaying = () => {
+                handleSuccess();
+            };
+            video.addEventListener("playing", onPlaying, { once: true });
 
             hls.on(Hls.Events.ERROR, (event, data) => {
                 if (data.fatal) {
                     console.error("HLS Fatal Error:", data);
                     switch (data.type) {
                         case Hls.ErrorTypes.NETWORK_ERROR:
-                            hls?.startLoad(); // Try to recover
+                            hls.startLoad(); // Try to recover
                             break;
                         case Hls.ErrorTypes.MEDIA_ERROR:
-                            hls?.recoverMediaError();
+                            hls.recoverMediaError();
                             break;
                         default:
                             setError("Stream Error (Fatal)");
-                            hls?.destroy();
+                            clearWatchdog();
+                            hls.destroy();
+                            hlsRef.current = null;
                             break;
                     }
                 }
             });
-        }
-        else if (video.canPlayType("application/vnd.apple.mpegurl")) {
-            video.src = src;
-            video.addEventListener("loadedmetadata", () => {
-                video.play()
-                    .then(handleSuccess)
-                    .catch(() => setIsLoading(false));
-            });
-            video.addEventListener("error", () => setError("Native Playback Error"));
-        } else {
-            setError("HLS Not Supported");
-        }
+
+            // Mulai watchdog setelah attach. Kalau play() tidak resolve dalam timeout, reload.
+            startWatchdog();
+        };
+
+        startHls(0);
 
         return () => {
-            if (hls) {
-                hls.destroy();
+            clearWatchdog();
+            clearRetryTimer();
+            if (hlsRef.current) {
+                hlsRef.current.destroy();
+                hlsRef.current = null;
             }
         };
     }, [src]);
@@ -133,7 +213,7 @@ export default function HlsPlayer({ src, autoPlay = true, muted = true, label, f
 
             {/* Overlay: Error */}
             {error && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-900/90 z-20 text-red-400 p-6 text-center">
+                <div className="absolute inset-0 flex items-center justify-center bg-zinc-900/90 z-20 text-red-400 p-6 text-center">
                     <AlertCircle className="w-10 h-10 mb-3 opacity-90" />
                     <p className="font-semibold text-sm mb-1">Gagal Memutar Video</p>
                     <p className="text-xs opacity-70 max-w-[200px]">{error}</p>
