@@ -14,7 +14,7 @@ export default function MonitoringPage() {
         { id: 4, name: "Channel 4", url: "https://isgpopen.ezvizlife.com/v3/openlive/FY2936828_4_1.m3u8?expire=1832428788&id=939309298402758656&c=4ec4ebb6a7&t=5968a7921324fc198dee96c5fbe46c9d9078567d298a164e023d735d42e495d1&ev=100" },
         { id: 5, name: "Channel 5", url: "https://isgpopen.ezvizlife.com/v3/openlive/FY2936828_5_1.m3u8?expire=1832428796&id=939309334585544704&c=4ec4ebb6a7&t=0c9227e6143f320a0451c9074cebbde387b9f1f3245359b7c68aa2053ca93cfb&ev=100" },
         { id: 6, name: "Channel 6", url: "https://vtmjakarta.ezvizlife.com:8883/v3/openlive/FY2936828_6_1.m3u8?expire=1832428805&id=939309370144555008&c=4ec4ebb6a7&t=8d27535505086aa4568ddf25f1b401f4a55b7d0326b06fb713aa6435f475e099&ev=100&u=2f109a26ea4148ef8e0ea65bcd21fff0" },
-        { id: 7, name: "Channel 7", url: "https://vtmucyn.ezvizlife.com:8883/v3/openlive/FY2936828_7_2.m3u8?expire=1848556560&id=1006954078940495872&c=4ec4ebb6a7&t=421d5725439af90802e869294f84cda19b3bdee943b1fe398f77f9f519bfd061&ev=100&u=42ea0238f1764a758b18af18b248d3cc" },
+        { id: 7, name: "Channel 7", url: "https://vtmucyn.ezvizlife.com:8883/v3/openlive/FY2936828_7_1.m3u8?expire=1848387647&id=1006245606955667456&c=4ec4ebb6a7&t=313028fab2d05b1929b47b1bed4aacc05023a2c3343fb932c4e8317c2296666d&ev=100&u=466ae99988964dc8837e65291bc8ec2f" },
     ];
 
     const [showTest, setShowTest] = useState(false);
